@@ -1,692 +1,1022 @@
-Network Topology
+# CrowdSec Testing Docker Container Environment — Network Topology
 
-The CrowdSec Security Testing Environment uses several isolated Docker networks connected through the lab router.
+## Overview
 
-Network Overview
+The CrowdSec Security Testing Environment uses three isolated Docker bridge
+networks connected through a dedicated laboratory router.
+
+The topology is designed for controlled security testing of:
+
+- CrowdSec SSH authentication detection
+- CrowdSec HTTP/NGINX detection
+- CrowdSec log acquisition
+- CrowdSec parsers
+- CrowdSec scenarios
+- CrowdSec alerts
+- CrowdSec decisions
+
+The primary purpose of this environment is to test and demonstrate
+**CrowdSec security detection capabilities** in a controlled Docker laboratory.
+
+Docker networking, logging, monitoring, and routing are supporting components
+of the CrowdSec testing environment.
+
+The environment is intentionally isolated and must not be exposed to
+untrusted or production networks.
+
+## Network Topology
+
                          CrowdSec Security Testing Environment
-                         ====================================
+                         =====================================
 
-                              Docker Host
-                                   |
-                                   |
-                            Attacker Hosts
-                                   |
-                                   |
-                         192.168.255.0/24
-                                   |
-                                   |
-                         +---------+---------+
-                         |       Router      |
-                         |   192.168.255.254 |
-                         |   10.10.10.254    |
-                         |   172.16.0.254    |
-                         +----+---------+----+
-                              |         |
-                10.10.10.0/24|         |172.16.0.0/24
-                              |         |
-                    +---------+         +---------+
-                    |                             |
-              +-----+------+               +------+------+
-              | SSH Server |               | NGINX Server|
-              | 10.10.10.10|              | 10.10.10.20 |
-              |            |               |             |
-              | CrowdSec   |               | CrowdSec    |
-              | SSHD       |               | NGINX       |
-              +------------+               +-------------+
+                                      Docker Host
+                                          |
+                                          |
+                              +-----------+-----------+
+                              |                       |
+                              |    CrowdSec Lab       |
+                              |      Services         |
+                              |                       |
+                              +-----------+-----------+
+                                          |
+                                  crowdSecNet
+                                  10.10.10.0/24
+                                          |
+                              +-----------+-----------+
+                              |                       |
+                              |      lab-router       |
+                              |                       |
+                              |    10.10.10.254        |
+                              +-----------+-----------+
+                                          |
+                 +------------------------+------------------------+
+                 |                        |                        |
+                 |                        |                        |
+          attackerNetA              attackerNetB             crowdSecNet
+       192.168.255.0/24            172.31.0.0/24            10.10.10.0/24
+                 |                        |                        |
+        +--------+--------+       +-------+--------+       +------+------+
+        |        |        |       |       |        |       |             |
+        |        |        |       |       |        |       |             |
+     .101     .102     .103    .111    .112     .113    .10           .20
+        |        |        |       |       |        |       |             |
+        v        v        v       v       v        v       v             v
+     host1a   host2a   host3a  host1b  host2b   host3b  SSH Server    NGINX
+                                                        CrowdSec      CrowdSec
 
-Network Segments
-Network	Purpose	Router / Gateway
-10.10.10.0/24	Main service network	10.10.10.254
-172.16.0.0/24	NGINX-side / attacker test network	172.16.0.254
-192.168.255.0/24	Attacker / routing network	192.168.255.254
+## Docker Networks
 
-The environment uses isolated Docker networks. The router container provides Layer-3 connectivity between the test networks.
+| Network | Subnet | Docker Gateway | Router IP |
+|---|---|---|---|
+| `crowdSecNet` | `10.10.10.0/24` | `10.10.10.1` | `10.10.10.254` |
+| `attackerNetA` | `192.168.255.0/24` | `192.168.255.1` | `192.168.255.254` |
+| `attackerNetB` | `172.31.0.0/24` | `172.31.0.1` | `172.31.0.254` |
 
-Individual container IP addresses should be verified with Docker because they may change when containers are recreated unless explicitly configured as static addresses in compose.yaml.
+The Docker bridge gateways and laboratory router addresses are separate.
 
-Main Service Network
-Network: 10.10.10.0/24
-Router:  10.10.10.254
+The laboratory router provides routed connectivity between the three
+laboratory networks.
 
+## Main Service Network
 
-The main service network contains the security services monitored by CrowdSec.
+### crowdSecNet
 
-Current service addresses:
+```text
+Network:  crowdSecNet
+Subnet:   10.10.10.0/24
+Gateway:  10.10.10.1
+Router:   10.10.10.254
 
-SSH Server:   10.10.10.10
-NGINX Server: 10.10.10.20
-Router:       10.10.10.254
+The main service network contains the SSH server, NGINX server, and one
+interface of the laboratory router.
 
-SSH Server
-Container: ssh-server
-IP:        10.10.10.10
-Service:   SSH
-Port:      22
-CrowdSec:  Enabled
+Services
+Container	IP Address	Purpose
+lab-router	10.10.10.254	Laboratory router
+ssh-server	10.10.10.10	SSH service monitored by CrowdSec
+nginx-server	10.10.10.20	NGINX service monitored by CrowdSec
 
-NGINX Server
-Container: nginx-server
-IP:        10.10.10.20
-Service:   NGINX
-Port:      80
-CrowdSec:  Enabled
+The network is defined in compose.yaml as:
 
+crowdSecNet:
+  name: crowdSecNet
+  driver: bridge
 
-The NGINX HTTP service is published to the Docker host:
+  ipam:
+    config:
+      - subnet: 10.10.10.0/24
+        gateway: 10.10.10.1
 
-Host:      localhost:8080
-Container: nginx-server:80
+Attacker Network A
+attackerNetA
+Network:  attackerNetA
+Subnet:   192.168.255.0/24
+Gateway:  192.168.255.1
+Router:   192.168.255.254
 
+This network contains the first three attacker hosts.
 
-Test it with:
+Attacker Hosts
+Container	IP Address
+attacker-host1a	192.168.255.101
+attacker-host2a	192.168.255.102
+attacker-host3a	192.168.255.103
 
-curl -i http://localhost:8080/
+Router Interface
+lab-router    192.168.255.254
 
-Attacker Network
-Network: 192.168.255.0/24
-Router:  192.168.255.254
+The network is defined in compose.yaml as:
 
+attackerNetA:
+  name: attackerNetA
+  driver: bridge
 
-The attacker hosts are connected to the attacker-side network.
+  ipam:
+    config:
+      - subnet: 192.168.255.0/24
+        gateway: 192.168.255.1
 
-The environment currently contains six attacker containers:
+## Attacker Network B
 
-attacker-host1a
-attacker-host1b
-attacker-host2a
-attacker-host2b
-attacker-host3a
-attacker-host3b
+### attackerNetB
 
+```text
+Network:  attackerNetB
+Subnet:   172.31.0.0/24
+Gateway:  172.31.0.1
+Router:   172.31.0.254
 
-Their IP addresses should be discovered dynamically:
+This network contains the second group of attacker hosts.
 
-docker inspect -f '{{.Name}} {{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' \
-  attacker-host1a \
-  attacker-host1b \
-  attacker-host2a \
-  attacker-host2b \
-  attacker-host3a \
-  attacker-host3b
+Attacker Hosts
+Container	IP Address
+attacker-host1b	172.31.0.111
+attacker-host2b	172.31.0.112
+attacker-host3b	172.31.0.113
 
+Router Interface
+lab-router    172.31.0.254
 
-Enter an attacker host with:
+The network is defined in compose.yaml as:
 
-docker exec -it attacker-host1a bash
+attackerNetB:
+  name: attackerNetB
+  driver: bridge
 
+  ipam:
+    config:
+      - subnet: 172.31.0.0/24
+        gateway: 172.31.0.1
 
-If Bash is not available:
-
-docker exec -it attacker-host1a sh
-
-
-Check its network configuration:
-
-ip addr
-
-
-Check its routing table:
-
-ip route
+Complete Address Table
+Container	Hostname	Network	IP Address
+lab-router	lab-router	crowdSecNet	10.10.10.254
+lab-router	lab-router	attackerNetA	192.168.255.254
+lab-router	lab-router	attackerNetB	172.31.0.254
+ssh-server	ssh-server	crowdSecNet	10.10.10.10
+nginx-server	nginx-server	crowdSecNet	10.10.10.20
+attacker-host1a	attacker-host1a	attackerNetA	192.168.255.101
+attacker-host2a	attacker-host2a	attackerNetA	192.168.255.102
+attacker-host3a	attacker-host3a	attackerNetA	192.168.255.103
+attacker-host1b	attacker-host1b	attackerNetB	172.31.0.111
+attacker-host2b	attacker-host2b	attackerNetB	172.31.0.112
+attacker-host3b	attacker-host3b	attackerNetB	172.31.0.113
 
 Router
+The router container is:
 
-The router container provides connectivity between the isolated networks.
+Container: lab-router
+Hostname:  lab-router
 
-Container:
-
-lab-router
+The router has three network interfaces.
 
 
-The router participates in the following networks:
+## Router Interfaces
+
+```text
+crowdSecNet:
+    10.10.10.254/24
+
+attackerNetA:
+    192.168.255.254/24
+
+attackerNetB:
+    172.31.0.254/24
+
+The router connects:
 
 10.10.10.0/24
-172.16.0.0/24
 192.168.255.0/24
+172.31.0.0/24
 
+IPv4 forwarding is enabled inside the router.
 
-The router addresses are:
+The Compose configuration uses:
 
-10.10.10.254
-172.16.0.254
-192.168.255.254
+sysctls:
+  net.ipv4.ip_forward: "1"
+  net.ipv4.conf.all.rp_filter: "0"
+  net.ipv4.conf.default.rp_filter: "0"
 
+Current Router Routing Table
+The current routing table observed inside lab-router is:
 
-The router is responsible for forwarding traffic between the test networks.
+default via 192.168.255.1 dev eth0
+10.10.10.0/24 dev eth2 proto kernel scope link src 10.10.10.254
+172.31.0.0/24 dev eth1 proto kernel scope link src 172.31.0.254
+192.168.255.0/24 dev eth0 proto kernel scope link src 192.168.255.254
 
-Inspect the router:
-
-docker exec lab-router ip addr
-
-
-Display its routes:
+Verify with:
 
 docker exec lab-router ip route
 
-Traffic Flow
-SSH Brute-Force Test
+Current Router Interfaces
+The current router interface configuration is:
 
-The SSH security-testing path is:
+eth0
+    192.168.255.254/24
 
-+-------------------+
-| Attacker Host     |
-|                   |
-| 192.168.255.x     |
-+---------+---------+
-          |
-          | SSH authentication attempts
-          |
-          v
-+-------------------+
-|    Lab Router     |
-|                   |
-| 192.168.255.254   |
-| 10.10.10.254      |
-+---------+---------+
-          |
-          | 10.10.10.0/24
-          |
-          v
-+-------------------+
-|    SSH Server     |
-|                   |
-| 10.10.10.10       |
-| TCP/22            |
-+---------+---------+
-          |
-          | /var/log/auth.log
-          |
-          v
-+-------------------+
-|     CrowdSec      |
-|                   |
-| SSHD parsers      |
-+---------+---------+
-          |
-          v
-+-------------------+
-| SSH brute-force   |
-| scenarios         |
-+---------+---------+
-          |
-          v
-+-------------------+
-| CrowdSec Decision |
-+-------------------+
+eth1
+    172.31.0.254/24
 
+eth2
+    10.10.10.254/24
 
-The SSH server records authentication events in:
+Verify with:
+
+docker exec lab-router ip addr
+
+SSH Server
+The SSH server is:
+
+Container: ssh-server
+Hostname:  ssh-server
+Network:   crowdSecNet
+IP:        10.10.10.10
+SSH Port:  22
+
+The Docker host publishes the SSH service on:
+
+localhost:2222
+
+From the Docker host:
+
+ssh -p 2222 labuser@127.0.0.1
+
+From an attacker container:
+
+ssh labuser@10.10.10.10
+
+The SSH server writes authentication events to:
 
 /var/log/auth.log
 
+CrowdSec monitors this log.
 
-CrowdSec acquires the log using:
+## NGINX Server
 
-/etc/crowdsec/acquis.d/
+The NGINX server is:
 
+```text
+Container: nginx-server
+Hostname:  nginx-server
+Network:   crowdSecNet
+IP:        10.10.10.20
+HTTP Port: 80
 
-The SSH acquisition uses:
+The Docker host publishes HTTP port 8080:
 
-filenames:
-  - /var/log/auth.log
+localhost:8080
 
-labels:
-  type: syslog
+From the Docker host:
 
-NGINX HTTP Test
+curl -i http://127.0.0.1:8080/
 
-The HTTP security-testing path is:
+From an attacker container:
 
-+-------------------+
-| Attacker Host     |
-|                   |
-| 192.168.255.x     |
-+---------+---------+
-          |
-          | HTTP requests
-          |
-          v
-+-------------------+
-|    Lab Router     |
-+---------+---------+
-          |
-          | 10.10.10.0/24
-          |
-          v
-+-------------------+
-|   NGINX Server    |
-|                   |
-| 10.10.10.20       |
-| TCP/80            |
-+---------+---------+
-          |
-          | /var/log/nginx/access.log
-          |
-          v
-+-------------------+
-|     CrowdSec      |
-|                   |
-| NGINX parsers     |
-+---------+---------+
-          |
-          v
-+-------------------+
-| HTTP scenarios    |
-+---------+---------+
-          |
-          v
-+-------------------+
-| CrowdSec Decision |
-+-------------------+
+curl -i http://10.10.10.20/
 
-
-The NGINX access log is:
+NGINX writes access events to:
 
 /var/log/nginx/access.log
 
+CrowdSec monitors this log.
 
-The CrowdSec acquisition configuration is:
+Attacker Hosts
+The environment contains six Kali-based attacker containers.
 
-/etc/crowdsec/acquis.d/nginx.yaml
+They are divided into two attacker networks.
 
+Attacker Network A
+attacker-host1a
+192.168.255.101
 
-The acquisition configuration is:
+attacker-host2a
+192.168.255.102
 
-filenames:
-  - /var/log/nginx/access.log
+attacker-host3a
+192.168.255.103
 
-labels:
-  type: nginx
+Attacker Network B
+attacker-host1b
+172.31.0.111
 
-Container Inventory
+attacker-host2b
+172.31.0.112
 
-The environment contains the following primary containers.
+attacker-host3b
+172.31.0.113
 
-Container	Role	Network
-lab-router	Network router	All lab networks
-ssh-server	SSH + CrowdSec	10.10.10.0/24
-nginx-server	NGINX + CrowdSec	10.10.10.0/24
-attacker-host1a	Attack/test host	Attacker network
-attacker-host1b	Attack/test host	Attacker network
-attacker-host2a	Attack/test host	Attacker network
-attacker-host2b	Attack/test host	Attacker network
-attacker-host3a	Attack/test host	Attacker network
-attacker-host3b	Attack/test host	Attacker network
-Verify the Actual Topology
+Each attacker uses the common attacker image built from:
 
-Docker may assign different container IP addresses after containers are removed and recreated.
+./attacker
 
-Always verify the current addresses rather than assuming an address.
+Enter an attacker container with:
 
-List running containers:
+docker exec -it attacker-host1a bash
 
-docker ps
+or:
 
+docker exec -it attacker-host1b bash
 
-List Docker networks:
+Attack Traffic Paths
+SSH Attack Path
+SSH traffic can originate from either attacker network.
+
+attacker-host1a
+192.168.255.101
+        |
+        v
+192.168.255.254
+lab-router
+        |
+        v
+10.10.10.10
+ssh-server
+        |
+        v
+/var/log/auth.log
+        |
+        v
+CrowdSec
+        |
+        v
+SSH parser
+        |
+        v
+SSH brute-force scenario
+        |
+        v
+CrowdSec alert / decision
+
+The same path applies to:
+
+attacker-host2a
+attacker-host3a
+attacker-host1b
+attacker-host2b
+attacker-host3b
+
+## NGINX HTTP Attack Path
+
+HTTP traffic follows:
+
+```text
+Attacker
+    |
+    v
+Lab Router
+    |
+    v
+10.10.10.20
+nginx-server
+    |
+    v
+/var/log/nginx/access.log
+    |
+    v
+CrowdSec
+    |
+    v
+NGINX / HTTP parsers
+    |
+    v
+HTTP security scenarios
+    |
+    v
+CrowdSec alert / decision
+
+For example:
+
+curl http://10.10.10.20/
+
+Network Verification
+Docker may recreate containers and interfaces when the environment is rebuilt.
+
+Verify the Docker networks with:
 
 docker network ls
 
+Expected laboratory networks:
 
-Show the Compose configuration:
+crowdSecNet
+attackerNetA
+attackerNetB
 
-docker compose config
+Inspect Network Configuration
+Inspect the main network:
 
+docker network inspect crowdSecNet
 
-Inspect a Docker network:
+Inspect attacker Network A:
 
-docker network inspect <network-name>
+docker network inspect attackerNetA
 
+Inspect attacker Network B:
 
-Display all container IP addresses:
+docker network inspect attackerNetB
+
+Find Container IP Addresses
+Display container names and IP addresses:
 
 docker inspect -f '{{.Name}} {{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' \
   $(docker ps -q)
 
-Verify Individual Containers
-SSH Server
-docker inspect -f \
-'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \
-ssh-server
+For the router:
 
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' lab-router
 
-Or:
+For the SSH server:
 
-docker exec ssh-server ip addr
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ssh-server
 
+For NGINX:
 
-Display routes:
-
-docker exec ssh-server ip route
-
-NGINX Server
-docker inspect -f \
-'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \
-nginx-server
-
-
-Or:
-
-docker exec nginx-server ip addr
-
-
-Display routes:
-
-docker exec nginx-server ip route
-
-Lab Router
-docker inspect -f \
-'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \
-lab-router
-
-
-Or:
-
-docker exec lab-router ip addr
-
-
-Display routes:
-
-docker exec lab-router ip route
-
-Verify Attacker Hosts
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' nginx-server
 
 For attacker-host1a:
 
-docker inspect -f \
-'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \
-attacker-host1a
-
-
-For attacker-host1b:
-
-docker inspect -f \
-'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \
-attacker-host1b
-
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' attacker-host1a
 
 For attacker-host2a:
 
-docker inspect -f \
-'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \
-attacker-host2a
-
-
-For attacker-host2b:
-
-docker inspect -f \
-'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \
-attacker-host2b
-
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' attacker-host2a
 
 For attacker-host3a:
 
-docker inspect -f \
-'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \
-attacker-host3a
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' attacker-host3a
 
+For `attacker-host1b`:
+
+```bash
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' attacker-host1b
+
+For attacker-host2b:
+
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' attacker-host2b
 
 For attacker-host3b:
 
-docker inspect -f \
-'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \
-attacker-host3b
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' attacker-host3b
 
-Connectivity Testing
-From an Attacker Host
-
-Enter an attacker:
+Connectivity Tests
+From Network A
+Enter:
 
 docker exec -it attacker-host1a bash
 
-
-Check the local address:
+Check the interface:
 
 ip addr
 
-
-Check the routing table:
+Check routes:
 
 ip route
 
+Test the router:
 
-Test the SSH server:
+ping -c 3 192.168.255.254
 
-ping -c 3 10.10.10.10
+Test NGINX:
 
+ping -c 3 10.10.10.20
+
+Test HTTP:
+
+curl -i http://10.10.10.20/
 
 Test SSH:
 
 nc -vz 10.10.10.10 22
 
+From Network B
+Enter:
+
+docker exec -it attacker-host1b bash
+
+Check the interface:
+
+ip addr
+
+Check routes:
+
+ip route
+
+Test the router:
+
+ping -c 3 172.31.0.254
 
 Test NGINX:
+
+ping -c 3 10.10.10.20
+
+Test HTTP:
 
 curl -i http://10.10.10.20/
 
-
-If ICMP is disabled or filtered, a failed ping does not necessarily mean that TCP connectivity is unavailable. Use nc or curl to test the actual service.
-
-Host-Port Access
-
-The Docker host exposes the NGINX HTTP service on port 8080:
-
-Docker Host
-    |
-    | TCP/8080
-    v
-nginx-server
-    |
-    | TCP/80
-    v
-NGINX
-
-
-Test from the Docker host:
-
-curl -i http://localhost:8080/
-
-
-The SSH service is published on port 2222:
-
-Docker Host
-    |
-    | TCP/2222
-    v
-ssh-server
-    |
-    | TCP/22
-    v
-SSHD
-
-
-Test from the Docker host:
-
-ssh -p 2222 labuser@localhost
-
-
-The published host ports are intended for local testing. Do not expose them to untrusted networks.
-
-CrowdSec Monitoring Flow
-SSH
-SSH authentication
-        |
-        v
-/var/log/auth.log
-        |
-        v
-CrowdSec acquisition
-        |
-        v
-syslog parser
-        |
-        v
-SSHD scenarios
-        |
-        v
-Alert
-        |
-        v
-Decision
-
-
-Useful commands:
-
-docker exec ssh-server cscli metrics
-
-docker exec ssh-server cscli alerts list
-
-docker exec ssh-server cscli decisions list
-
-NGINX
-HTTP request
-        |
-        v
-NGINX
-        |
-        v
-/var/log/nginx/access.log
-        |
-        v
-CrowdSec acquisition
-        |
-        v
-NGINX parser
-        |
-        v
-HTTP scenarios
-        |
-        v
-Alert
-        |
-        v
-Decision
-
-
-Useful commands:
-
-docker exec nginx-server cscli metrics
-
-docker exec nginx-server cscli alerts list
-
-docker exec nginx-server cscli decisions list
-
-Important: Container IPs vs. Network Addresses
-
-The following values represent network ranges:
-
-10.10.10.0/24
-172.16.0.0/24
-192.168.255.0/24
-
-
-They are not individual container addresses.
-
-The following are individual addresses:
-
-10.10.10.10       SSH server
-10.10.10.20       NGINX server
-10.10.10.254      Router
-
-
-The attacker host addresses should be discovered using Docker unless they are explicitly assigned static addresses in compose.yaml.
-
-Do not assume that a container will retain the same dynamically assigned IP after:
-
-docker compose down
-
-
-followed by:
-
-docker compose up -d
-
-
-For this reason, use Docker service/container names where Docker DNS is available, and use docker inspect to determine IP addresses when testing routed connectivity.
-
-Recommended Verification Sequence
-
-After starting the environment:
-
-docker compose up -d
-
-
-Check the containers:
-
-docker compose ps
-
-
-Check the networks:
-
-docker network ls
-
-
-Check the router:
-
-docker exec lab-router ip addr
-
-
-Check the router routes:
-
-docker exec lab-router ip route
-
-
-Check the SSH server:
-
-docker exec ssh-server ip addr
-
-
-Check the NGINX server:
-
-docker exec nginx-server ip addr
-
-
-Check an attacker:
-
-docker exec attacker-host1a ip addr
-
-
-Check attacker routes:
-
-docker exec attacker-host1a ip route
-
-
-Test NGINX:
-
-curl -i http://localhost:8080/
-
-
-Test SSH from the host:
-
-ssh -p 2222 labuser@localhost
-
-
-Test SSH from an attacker:
-
-docker exec -it attacker-host1a bash
-
-
-Then:
+Test SSH:
 
 nc -vz 10.10.10.10 22
 
-Security Boundary
+Verify Router Forwarding
+Check IPv4 forwarding:
 
+docker exec lab-router \
+  cat /proc/sys/net/ipv4/ip_forward
+
+Expected:
+
+1
+
+The router should report:
+
+net.ipv4.ip_forward = 1
+
+
+
+## Verify Router Connectivity
+
+Run:
+
+```bash
+docker exec lab-router ip addr
+
+Expected relevant interfaces:
+
+eth0 -> 192.168.255.254/24
+eth1 -> 172.31.0.254/24
+eth2 -> 10.10.10.254/24
+
+Run:
+
+docker exec lab-router ip route
+
+Expected directly connected networks:
+
+10.10.10.0/24
+172.31.0.0/24
+192.168.255.0/24
+
+Docker Compose Network Configuration
+The authoritative network configuration is maintained in:
+
+compose.yaml
+
+The relevant network definitions are:
+
+networks:
+
+  crowdSecNet:
+    name: crowdSecNet
+    driver: bridge
+
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+          gateway: 10.10.10.1
+
+  attackerNetA:
+    name: attackerNetA
+    driver: bridge
+
+    ipam:
+      config:
+        - subnet: 192.168.255.0/24
+          gateway: 192.168.255.1
+
+  attackerNetB:
+    name: attackerNetB
+    driver: bridge
+
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
+          gateway: 172.31.0.1
+
+Important Addressing Notes
+The following values are part of the current laboratory topology:
+
+crowdSecNet
+10.10.10.0/24
+
+attackerNetA
+192.168.255.0/24
+
+attackerNetB
+172.31.0.0/24
+
+The previous 172.16.0.0/24 network is no longer used by this environment.
+
+Do not use:
+
+172.16.0.0/24
+172.16.0.254
+172.16.0.111
+172.16.0.112
+172.16.0.113
+
+The Network B addresses are now:
+
+172.31.0.254
+172.31.0.111
+172.31.0.112
+172.31.0.113
+
+Network Naming
+The current Docker network names are:
+
+crowdSecNet
+attackerNetA
+attackerNetB
+
+The spelling is important.
+
+Do not use the old misspelled names:
+
+attakerNetA
+attakerNetB
+
+All current Compose configuration and documentation should use:
+
+attackerNetA
+attackerNetB
+
+## Recreating the Networks
+
+If Docker reports a network overlap or stale network configuration, stop the
+Compose environment:
+
+```bash
+docker compose down
+
+Inspect the existing networks:
+
+docker network ls
+
+If an old laboratory network is no longer needed, remove it explicitly:
+
+docker network rm <network-name>
+
+Then recreate the environment:
+
+docker compose up -d
+
+Before removing a network, verify that it is not being used by another
+Docker project.
+
+Verify the Complete Topology
+Run:
+
+docker compose ps
+
+Then:
+
+docker network inspect crowdSecNet
+
+docker network inspect attackerNetA
+
+docker network inspect attackerNetB
+
+Finally:
+
+docker exec lab-router ip addr
+
+and:
+
+docker exec lab-router ip route
+
+The resulting configuration should correspond to:
+
+                         +----------------------+
+                         |      lab-router      |
+                         +----------------------+
+                            /        |        \
+                           /         |         \
+                          /          |          \
+                         /           |           \
+                        v            v            v
+
+             attackerNetA      crowdSecNet      attackerNetB
+            192.168.255.0/24   10.10.10.0/24    172.31.0.0/24
+
+                 |                  |                  |
+                 |                  |                  |
+        +--------+--------+    +----+----+    +-------+-------+
+        |        |        |    |         |    |       |       |
+        v        v        v    v         v    v       v       v
+
+      .101     .102     .103  .10       .20  .111   .112    .113
+
+      host1a   host2a   host3a SSH     NGINX host1b host2b host3b
+
+Security Warning
 This topology is intentionally designed for security testing.
 
-The attacker hosts are part of the controlled environment and are intended to generate test traffic toward the services being monitored by CrowdSec.
+The attacker containers are capable of generating network traffic and
+security-testing activity.
 
-The environment should remain isolated from:
+Keep the entire environment isolated.
 
-Production networks
-Production servers
-Corporate networks
-Untrusted users
-Public Internet-facing interfaces
+Do not expose the following to the public Internet:
 
-Do not connect the lab router to a production network.
+ssh-server
+nginx-server
 
-Do not reuse the test credentials outside this environment.
+attacker-host1a
+attacker-host2a
+attacker-host3a
 
-Do not use the attacker hosts to test systems for which you do not have explicit authorization.
+attacker-host1b
+attacker-host2b
+attacker-host3b
 
-The purpose of the topology is to provide a reproducible and isolated environment for learning how network traffic becomes logs, how CrowdSec parses those logs, and how detection scenarios produce alerts and decisions.
+lab-router
+
+Do not connect the laboratory networks directly to production infrastructure.
+
+Only perform security testing against systems and networks that you own or
+have explicit authorization to test.
+
+## Topology Summary
+
+### Networks
+
+```text
+crowdSecNet
+    10.10.10.0/24
+    gateway: 10.10.10.1
+    router:  10.10.10.254
+
+attackerNetA
+    192.168.255.0/24
+    gateway: 192.168.255.1
+    router:  192.168.255.254
+
+attackerNetB
+    172.31.0.0/24
+    gateway: 172.31.0.1
+    router:  172.31.0.254
+
+Servers
+ssh-server
+    10.10.10.10
+    SSH: 22
+
+nginx-server
+    10.10.10.20
+    HTTP: 80
+
+Attackers
+attacker-host1a
+    192.168.255.101
+
+attacker-host2a
+    192.168.255.102
+
+attacker-host3a
+    192.168.255.103
+
+attacker-host1b
+    172.31.0.111
+
+attacker-host2b
+    172.31.0.112
+
+attacker-host3b
+    172.31.0.113
+
+Router
+lab-router
+
+    192.168.255.254
+    172.31.0.254
+    10.10.10.254
+
+CrowdSec Testing Flow
+The network topology supports controlled CrowdSec testing through the
+following paths:
+
+Attacker
+    |
+    v
+Laboratory Router
+    |
+    v
+Target Service
+    |
+    v
+Service Log
+    |
+    v
+CrowdSec Acquisition
+    |
+    v
+CrowdSec Parser
+    |
+    v
+CrowdSec Scenario
+    |
+    v
+CrowdSec Alert
+    |
+    v
+CrowdSec Decision
+
+For SSH testing:
+
+Attacker
+    |
+    v
+SSH Server
+    |
+    v
+/var/log/auth.log
+    |
+    v
+CrowdSec
+
+For HTTP/NGINX testing:
+
+Attacker
+    |
+    v
+NGINX Server
+    |
+    v
+/var/log/nginx/access.log
+    |
+    v
+CrowdSec
+
+The network topology exists to provide controlled and repeatable traffic
+sources for these CrowdSec detection tests.
+
+## Security and Responsible Use
+
+This project is an intentionally vulnerable security testing environment.
+
+It is provided for:
+
+- Educational purposes
+- Security research
+- Defensive-security testing
+- Authorized security testing
+- CrowdSec detection testing
+
+The environment may contain intentionally weak credentials, vulnerableconfigurations, security-testing tools, and attacker containers.
+
+You are responsible for ensuring that all testing is performed against systems and networks for which you have explicit authorization.
+
+Do not use this environment to attack, scan, probe, disrupt, or gain
+unauthorized access to third-party systems or networks.
+
+Do not expose the laboratory networks or attacker containers to the public Internet.
+
+Do not reuse laboratory credentials on real systems.
+
+Do not place production credentials, secrets, tokens, private keys or other sensitive information in this project.
+
+## Isolation Requirements
+
+The laboratory should remain isolated from:
+
+- Production networks
+- Corporate networks
+- Untrusted networks
+- Public Internet
+- Systems that are not authorized testing targets
+
+The attacker containers should be treated as untrusted laboratory hosts.
+
+The router should only provide connectivity between the intended laboratory
+network segments.
+
+## CrowdSec Testing Scope
+
+The primary security purpose of this topology is to provide controlled
+traffic sources and target services for testing CrowdSec.
+
+The environment is intended to demonstrate:
+
+- SSH authentication failure detection
+- SSH brute-force detection
+- HTTP request detection
+- NGINX log acquisition
+- CrowdSec parsing
+- CrowdSec scenarios
+- CrowdSec alerts
+- CrowdSec decisions
+- CrowdSec monitoring and validation
+
+Docker networking and routing are supporting infrastructure for these tests.
+
+## Disclaimer
+
+This project is provided "as is", without warranties or guarantees of any kind.
+
+The authors and contributors are not responsible for unauthorized use, damage, disruption, data loss, security incidents, or other consequences resulting from the use or misuse of this project.
+
+By using this project, you agree to use it only in environments where you have appropriate authorization.
+
+## License
+
+Unless a separate license file states otherwise, this project is intended to be distributed under the license specified in the repository's `LICENSE` file.
+
+Third-party software, packages, container images, tools, and other
+components remain subject to their respective licenses and terms.
+
+Users must comply with all applicable licenses, terms, conditions, rules, laws, regulations, and authorization requirements when using this project or its third-party components.
+
+## Final Topology Reference
+
+The authoritative current topology is:
+
+```text
+crowdSecNet
+    10.10.10.0/24
+    gateway 10.10.10.1
+
+attackerNetA
+    192.168.255.0/24
+    gateway 192.168.255.1
+
+attackerNetB
+    172.31.0.0/24
+    gateway 172.31.0.1
+
+
+lab-router
+    10.10.10.254
+    192.168.255.254
+    172.31.0.254
+
+ssh-server
+    10.10.10.10
+
+nginx-server
+    10.10.10.20
+
+attacker-host1a
+    192.168.255.101
+
+attacker-host2a
+    192.168.255.102
+
+attacker-host3a
+    192.168.255.103
+
+attacker-host1b
+    172.31.0.111
+
+attacker-host2b
+    172.31.0.112
+
+attacker-host3b
+    172.31.0.113
+
+Authoritative Configuration
+The Docker Compose configuration is the authoritative source for the
+actual network configuration:
+
+compose.yaml
+
+This document should be kept synchronized with compose.yaml.
+
+If the Docker configuration changes, update this topology document
+accordingly.
+
+Final Safety Notice
+Before starting the laboratory, verify that:
+
+The environment is isolated.
+The laboratory networks are not connected to production networks.
+Laboratory credentials are not used anywhere else.
+All testing targets are owned by you or covered by explicit authorization.
+The intentionally vulnerable services are not exposed to the public
+Internet.
+Secrets and runtime credentials are not committed to Git.
+The environment is shut down when testing is complete.
+The purpose of this topology is to provide controlled network connectivity
+for CrowdSec security detection testing.
+
+Keep the laboratory isolated.

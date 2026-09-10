@@ -7,6 +7,10 @@ echo " Docker Lab Router"
 echo "=========================================="
 
 echo
+echo "[*] Hostname:"
+hostname
+
+echo
 echo "[*] Interfaces:"
 ip addr
 
@@ -24,7 +28,7 @@ echo "net.ipv4.ip_forward = $FORWARDING"
 if [ "$FORWARDING" != "1" ]; then
     echo
     echo "ERROR: IPv4 forwarding is not enabled."
-    echo "Check the net.ipv4.ip_forward setting in compose.yml."
+    echo "Check the net.ipv4.ip_forward setting in compose.yaml."
     exit 1
 fi
 

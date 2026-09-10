@@ -23,17 +23,17 @@ services:
       crowdSecNet:
         ipv4_address: 10.10.10.254
 
-      attakerNetA:
+      attackerNetA:
         ipv4_address: 192.168.255.254
 
-      attakerNetB:
-        ipv4_address: 172.16.0.254
+      attackerNetB:
+        ipv4_address: 172.31.0.254
 
     restart: unless-stopped
 
 
   # ============================================================
-  # SSH SERVER - UBUNTU
+  # SSH SERVER
   # ============================================================
 
   ssh-server:
@@ -57,7 +57,7 @@ services:
 
 
   # ============================================================
-  # NGINX SERVER - DEBIAN
+  # NGINX SERVER
   # ============================================================
 
   nginx-server:
@@ -81,7 +81,7 @@ services:
 
 
   # ============================================================
-  # ATTACKER NETWORK A - KALI
+  # ATTACKER NETWORK A
   # ============================================================
 
   attacker-host1a:
@@ -95,7 +95,7 @@ services:
       - NET_ADMIN
 
     networks:
-      attakerNetA:
+      attackerNetA:
         ipv4_address: 192.168.255.101
 
     restart: unless-stopped
@@ -112,7 +112,7 @@ services:
       - NET_ADMIN
 
     networks:
-      attakerNetA:
+      attackerNetA:
         ipv4_address: 192.168.255.102
 
     restart: unless-stopped
@@ -129,14 +129,14 @@ services:
       - NET_ADMIN
 
     networks:
-      attakerNetA:
+      attackerNetA:
         ipv4_address: 192.168.255.103
 
     restart: unless-stopped
 
 
   # ============================================================
-  # ATTACKER NETWORK B - KALI
+  # ATTACKER NETWORK B
   # ============================================================
 
   attacker-host1b:
@@ -150,8 +150,8 @@ services:
       - NET_ADMIN
 
     networks:
-      attakerNetB:
-        ipv4_address: 172.16.0.111
+      attackerNetB:
+        ipv4_address: 172.31.0.111
 
     restart: unless-stopped
 
@@ -167,8 +167,8 @@ services:
       - NET_ADMIN
 
     networks:
-      attakerNetB:
-        ipv4_address: 172.16.0.112
+      attackerNetB:
+        ipv4_address: 172.31.0.112
 
     restart: unless-stopped
 
@@ -184,17 +184,21 @@ services:
       - NET_ADMIN
 
     networks:
-      attakerNetB:
-        ipv4_address: 172.16.0.113
+      attackerNetB:
+        ipv4_address: 172.31.0.113
 
     restart: unless-stopped
 
 
 # ==============================================================
-# NETWORKS
+# NETWORK DEFINITIONS
 # ==============================================================
 
 networks:
+
+  # ------------------------------------------------------------
+  # Main service network
+  # ------------------------------------------------------------
 
   crowdSecNet:
     name: crowdSecNet
@@ -206,8 +210,12 @@ networks:
           gateway: 10.10.10.1
 
 
-  attakerNetA:
-    name: attakerNetA
+  # ------------------------------------------------------------
+  # Attacker Network A
+  # ------------------------------------------------------------
+
+  attackerNetA:
+    name: attackerNetA
     driver: bridge
 
     ipam:
@@ -216,11 +224,15 @@ networks:
           gateway: 192.168.255.1
 
 
-  attakerNetB:
-    name: attakerNetB
+  # ------------------------------------------------------------
+  # Attacker Network B
+  # ------------------------------------------------------------
+
+  attackerNetB:
+    name: attackerNetB
     driver: bridge
 
     ipam:
       config:
-        - subnet: 172.16.0.0/24
-          gateway: 172.16.0.1
+        - subnet: 172.31.0.0/24
+          gateway: 172.31.0.1

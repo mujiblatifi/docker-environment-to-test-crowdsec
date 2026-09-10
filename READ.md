@@ -1,141 +1,132 @@
-CrowdSec Security Testing Environment
+# CrowdSec Testing Docker Container Environment
 
-❗ WARNING — INTENTIONALLY VULNERABLE SECURITY TESTING ENVIRONMENT
+> **WARNING — INTENTIONALLY VULNERABLE SECURITY TESTING ENVIRONMENT**
+>
+> This project is an intentionally vulnerable educational and research
+> environment designed to demonstrate and validate CrowdSec detection
+> capabilities against SSH authentication failures and HTTP/NGINX activity.
+>
+> The environment contains intentionally weak laboratory credentials,
+> attacker containers, security-testing tools, and routed Docker networks.
+>
+> **DO NOT expose the SSH server, NGINX server, attacker containers, or
+> laboratory networks to the public Internet or an untrusted network.**
+>
+> Run this project only in an isolated and controlled environment.
+>
+> The credentials included in this project are for laboratory use only and
+> must never be reused on real systems.
 
-This project is an intentionally vulnerable security testing environment designed to demonstrate and validate CrowdSec detection capabilities against SSH brute-force activity and HTTP/NGINX attacks.
+## Overview
 
-The environment contains intentionally weak credentials and dedicated attacker containers.
-
-DO NOT expose the SSH server, NGINX server, attacker containers, or any of the laboratory networks to the public Internet or an untrusted network.
-
-Run this project only in an isolated and controlled environment.
-
-The credentials included in this project are for testing purposes only and must never be reused on real systems.
-
-Overview
-
-This project provides a Docker-based security testing environment for experimenting with CrowdSec in a controlled and isolated network topology.
+This project provides a Docker-based laboratory environment for learning, testing, and researching CrowdSec security detection and response capabilities. The environment provides controlled SSH and HTTP/NGINX traffic, isolated Docker networks, and intentionally vulnerable services to demonstrate how CrowdSec acquires logs, parses events, detects suspicious activity, generates alerts, and creates security decisions.
 
 The environment contains:
 
-Multiple attacker containers used to generate controlled security-testing traffic.
-An SSH server running CrowdSec and monitoring SSH authentication activity.
-An NGINX server running CrowdSec and monitoring HTTP access logs.
-A router container providing Layer-3 connectivity between the test networks.
-Dedicated Docker networks representing separate network segments.
+- Multiple Kali Linux attacker containers.
+- An SSH server running CrowdSec and monitoring SSH authentication activity.
+- An NGINX server running CrowdSec and monitoring HTTP access logs.
+- A router container providing routed connectivity between laboratory networks.
+- Dedicated Docker bridge networks representing separate network segments.
+- CrowdSec configurations for log acquisition, parsing, scenarios, alerts,
+  metrics, and decisions.
 
-The primary objective is to provide a reproducible environment where users can:
+The primary objective is to provide a reproducible environment where students, researchers, and security practitioners can generate controlled test traffic and observe how CrowdSec processes logs, detects activity, and produces alerts and decisions.
 
-Generate controlled suspicious activity.
-Observe application and authentication logs.
-Observe CrowdSec parsers processing events.
-Observe CrowdSec scenarios detecting suspicious behavior.
-Inspect CrowdSec alerts.
-Inspect CrowdSec decisions.
-Understand how CrowdSec operates inside containerized environments.
-Architecture
+This environment is intended for educational and research purposes only.
 
-The environment is divided into three Docker network segments.
+## Architecture
 
-                         CrowdSec Security Testing Environment
-                         ====================================
+The laboratory uses three isolated Docker network segments:
 
-                       ATTACKER NETWORK
-                         172.16.0.0/24
-                              |
-                              |
-          +-------------------+-------------------+
-          |                   |                   |
-          |                   |                   |
-+---------+---------+ +-------+---------+ +-------+---------+
-| attacker-host1a   | | attacker-host1b | | attacker-host2a |
-| 172.16.0.101      | | 172.16.0.102    | | 172.16.0.103    |
-+-------------------+ +-----------------+ +-----------------+
-          |
-          |
-+---------+-------------------------------------------------+
-|                     lab-router                            |
-|                                                           |
-| 172.16.0.254    192.168.255.254    10.10.10.254          |
-+---------+-------------------------------------------------+
-          |                    |                    |
-          |                    |                    |
-          |              ROUTED NETWORK            |
-          |              192.168.255.0/24          |
-          |                    |                    |
-          |                    |                    |
-          |             192.168.255.x               |
-          |                    |                    |
-          +--------------------+--------------------+
-                               |
-                               |
-                       MAIN SERVICE NETWORK
-                          10.10.10.0/24
-                               |
-                +--------------+--------------+
-                |                             |
-                |                             |
-        +-------+--------+             +------+--------+
-        |   ssh-server   |             |  nginx-server |
-        |  10.10.10.10   |             |  10.10.10.20  |
-        |                |             |               |
-        | CrowdSec       |             | CrowdSec      |
-        | SSH monitoring |             | NGINX monitor |
-        +----------------+             +---------------+
+                         CrowdSec Security Testing Lab
+                         =============================
 
+                 attackerNetA                  attackerNetB
+              192.168.255.0/24                 172.31.0.0/24
+                       │                              │
+                       │                              │
+             ┌─────────┴─────────┐          ┌─────────┴─────────┐
+             │                   │          │                   │
+       attacker-host1a     attacker-host2a  attacker-host1b     attacker-host2b
+       192.168.255.101     192.168.255.102  172.31.0.111       172.31.0.112
+             │                   │          │                   │
+       attacker-host3a             │        attacker-host3b     │
+       192.168.255.103             │        172.31.0.113         │
+             │                     │              │              │
+             └──────────────┬──────┴──────────────┴──────────────┘
+                            │
+                     ┌──────▼──────┐
+                     │  lab-router │
+                     │             │
+                     │ 192.168.255.254
+                     │ 172.31.0.254
+                     │ 10.10.10.254
+                     └──────┬──────┘
+                            │
+                     crowdSecNet
+                     10.10.10.0/24
+                            │
+                ┌───────────┴───────────┐
+                │                       │
+         ┌──────▼──────┐         ┌──────▼──────┐
+         │ SSH Server  │         │ NGINX Server│
+         │ 10.10.10.10 │         │ 10.10.10.20 │
+         │             │         │             │
+         │  CrowdSec   │         │  CrowdSec   │
+         │    SSHD     │         │    NGINX    │
+         └─────────────┘         └─────────────┘
 
-Important: The addresses above correspond to the intended topology. If the Compose configuration changes, use docker network inspect to verify the addresses actually assigned to the containers.
+## Network Topology
 
-Network Topology
-Network	Subnet	Purpose
-Attacker network	172.16.0.0/24	Attacker containers
-Main service network	10.10.10.0/24	SSH and NGINX services
-Routed/test network	192.168.255.0/24	Router-to-attacker/test connectivity
-Router Addresses
+| Network | Subnet | Router Address | Docker Gateway | Purpose |
+|---|---|---|---|---|
+| crowdSecNet | 10.10.10.0/24 | 10.10.10.254 | 10.10.10.1 | Main service network |
+| attackerNetA | 192.168.255.0/24 | 192.168.255.254 | 192.168.255.1 | Attacker network A |
+| attackerNetB | 172.31.0.0/24 | 172.31.0.254 | 172.31.0.1 | Attacker network B |
 
-The router provides connectivity between the networks:
+The Docker bridge gateways and laboratory router addresses are separate.
 
-Interface / Network	Router Address
-Attacker network	172.16.0.254
-Routed/test network	192.168.255.254
-Main service network	10.10.10.254
-Service Addresses
-Container	Address	Service
-ssh-server	10.10.10.10	SSH + CrowdSec
-nginx-server	10.10.10.20	NGINX + CrowdSec
-lab-router	10.10.10.254	Router
-lab-router	172.16.0.254	Router
-lab-router	192.168.255.254	Router
-Attacker Addresses
+The laboratory router provides routed connectivity between the three
+laboratory networks.
 
-The attacker containers use the 172.16.0.0/24 network.
+## Static Addresses
 
-The current environment contains:
+### Router
 
-Container	Address
-attacker-host1a	172.16.0.101
-attacker-host1b	172.16.0.102
-attacker-host2a	172.16.0.103
-attacker-host2b	172.16.0.104
-attacker-host3a	172.16.0.105
-attacker-host3b	172.16.0.106
+```text
+lab-router
+    crowdSecNet    10.10.10.254
+    attackerNetA   192.168.255.254
+    attackerNetB   172.31.0.254
+```
 
-Verify the actual addresses with:
+### Service Hosts
 
-docker network inspect <attacker-network-name>
+```text
+ssh-server       10.10.10.10
+nginx-server     10.10.10.20
+```
 
+### Attacker Network A
 
-You can also inspect the container interfaces directly:
+```text
+attacker-host1a  192.168.255.101
+attacker-host2a  192.168.255.102
+attacker-host3a  192.168.255.103
+```
 
-docker exec attacker-host1a ip addr
+### Attacker Network B
 
+```text
+attacker-host1b  172.31.0.111
+attacker-host2b  172.31.0.112
+attacker-host3b  172.31.0.113
+```
+## Project Structure
 
-and routes:
-
-docker exec attacker-host1a ip route
-
-Project Structure
-docker-environment-to-test-crowdsec/
+```text
+crowdsec-security-environment/
 │
 ├── attacker/
 │   ├── Dockerfile
@@ -160,998 +151,1191 @@ docker-environment-to-test-crowdsec/
 │   └── sshd_config
 │
 ├── compose.yaml
-├── .gitignore
 ├── NETWORK-TOPOLOGY.md
-└── README.md
+├── README.md
+└── LICENSE
+```
 
-Prerequisites
+## Prerequisites
 
-Install the following software before deploying the environment:
+Before deploying the environment, install:
 
-Docker
-Docker Compose v2
+- Docker
+- Docker Compose v2
 
 Verify Docker:
 
+```bash
 docker --version
-
+```
 
 Verify Docker Compose:
 
+```bash
 docker compose version
+```
 
+The environment is designed to run using Docker containers and does not require CrowdSec to be installed directly on the host.
 
-The environment is designed to run inside Docker and does not require CrowdSec to be installed directly on the host.
-
-Clone the Repository
+## Clone the Repository
 
 Clone the repository:
 
-git clone https://github.com/<YOUR_USERNAME>/docker-environment-to-test-crowdsec.git
-
+```bash
+git clone https://github.com/<YOUR_USERNAME>/crowdsec-security-environment.git
+```
 
 Enter the project directory:
 
-cd docker-environment-to-test-crowdsec
+```bash
+cd crowdsec-security-environment
+```
 
-Build the Environment
+## Build the Environment
 
-Build all images:
+Build all containers without using the build cache:
 
-docker compose build
-
+```bash
+docker compose build --no-cache
+```
 
 Start the environment:
 
+```bash
 docker compose up -d
+```
 
+Check the running containers:
 
-Check the containers:
-
+```bash
 docker compose ps
+```
 
+You should see containers similar to:
 
-You should see the following services:
-
-attacker-host1a
-attacker-host1b
-attacker-host2a
-attacker-host2b
-attacker-host3a
-attacker-host3b
+```text
 lab-router
-nginx-server
 ssh-server
+nginx-server
+attacker-host1a
+attacker-host2a
+attacker-host3a
+attacker-host1b
+attacker-host2b
+attacker-host3b
+```
 
-Verify Container Logs
+## Verify Docker Networks
 
-Check the SSH server:
+List Docker networks:
 
-docker logs ssh-server
+```bash
+docker network ls
+```
 
+Inspect the main network:
 
-Check the NGINX server:
+```bash
+docker network inspect crowdSecNet
+```
 
-docker logs nginx-server
+Inspect attacker network A:
 
+```bash
+docker network inspect attackerNetA
+```
 
-Check the router:
+Inspect attacker network B:
 
-docker logs lab-router
+```bash
+docker network inspect attackerNetB
+```
 
+The expected subnets are:
 
-Check an attacker:
+```text
+crowdSecNet    10.10.10.0/24
+attackerNetA   192.168.255.0/24
+attackerNetB   172.31.0.0/24
+```
 
-docker logs attacker-host1a
+The Docker bridge gateways are:
 
-Verify the NGINX Server
+```text
+crowdSecNet    10.10.10.1
+attackerNetA   192.168.255.1
+attackerNetB   172.31.0.1
+```
 
-The NGINX service is published on the Docker host on port 8080.
+The laboratory router provides the routed connectivity between these
+networks.
 
-Run:
+## Verify the Router
 
+Check router interfaces:
+
+```bash
+docker exec lab-router ip addr
+```
+
+Check router routes:
+
+```bash
+docker exec lab-router ip route
+```
+
+The router should have:
+
+```text
+192.168.255.254
+172.31.0.254
+10.10.10.254
+```
+
+The expected connected routes are:
+
+```text
+10.10.10.0/24
+172.31.0.0/24
+192.168.255.0/24
+```
+
+Verify IPv4 forwarding:
+
+```bash
+docker exec lab-router cat /proc/sys/net/ipv4/ip_forward
+```
+
+Expected result:
+
+```text
+1
+```
+
+## Verify Container Addresses
+
+Check all container addresses:
+
+```bash
+docker inspect -f '{{.Name}} {{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' $(docker ps -q)
+```
+
+Check the individual attacker hosts:
+
+```bash
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' attacker-host1a
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' attacker-host2a
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' attacker-host3a
+
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' attacker-host1b
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' attacker-host2b
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' attacker-host3b
+```
+
+Expected attacker addresses:
+
+```text
+attacker-host1a    192.168.255.101
+attacker-host2a    192.168.255.102
+attacker-host3a    192.168.255.103
+
+attacker-host1b    172.31.0.111
+attacker-host2b    172.31.0.112
+attacker-host3b    172.31.0.113
+```
+
+## Verify the NGINX Server
+
+The NGINX server uses:
+
+```text
+Container: nginx-server
+IP:        10.10.10.20
+Port:      80
+Host port: 8080
+```
+
+From the Docker host:
+
+```bash
 curl -i http://localhost:8080/
+```
+
+A successful response should return HTTP 200.
+
+The test page should identify the CrowdSec laboratory NGINX service.
+
+Check the NGINX container:
+
+```bash
+docker exec nginx-server ip addr
+```
+
+Check its routing table:
+
+```bash
+docker exec nginx-server ip route
+```
+
+## Verify NGINX Logs
+
+NGINX access logs are located at:
+
+```text
+/var/log/nginx/access.log
+```
+
+View the log:
+
+```bash
+docker exec nginx-server tail -f /var/log/nginx/access.log
+```
+
+Generate a test request:
+
+```bash
+curl http://localhost:8080/
+```
+
+The request should appear in the NGINX access log.
 
 
-A successful response should resemble:
+## Verify CrowdSec
 
-HTTP/1.1 200 OK
-Server: nginx/1.24.0 (Ubuntu)
-Content-Type: text/html
-
-
-The test page should contain:
-
-<html>
-<body>
-<h1>CrowdSec Lab NGINX</h1>
-<p>NGINX is running.</p>
-</body>
-</html>
-
-
-Verify CrowdSec
-
-CrowdSec runs independently inside the ssh-server and nginx-server containers.
+CrowdSec runs independently inside the SSH and NGINX containers.
 
 Check the CrowdSec version on the SSH server:
 
+```bash
 docker exec ssh-server cscli version
+```
 
+Check the CrowdSec version on NGINX:
 
-Check the CrowdSec version on the NGINX server:
-
+```bash
 docker exec nginx-server cscli version
+```
 
-Verify CrowdSec Machines
+Check CrowdSec machines on the SSH server:
 
-On the SSH server:
-
+```bash
 docker exec ssh-server cscli machines list
+```
 
+Check CrowdSec machines on NGINX:
 
-On the NGINX server:
-
+```bash
 docker exec nginx-server cscli machines list
+```
 
-
-The local CrowdSec machine should be registered with the Local API.
-
-For example:
-
-Name                 IP Address    Status
-ssh-server-local     127.0.0.1     ✔️
-
-
-The exact output may vary depending on the CrowdSec version and initialization state.
-
-Verify CrowdSec Collections
+## Verify CrowdSec Collections
 
 On the SSH server:
 
+```bash
 docker exec ssh-server cscli collections list
-
+```
 
 On the NGINX server:
 
+```bash
 docker exec nginx-server cscli collections list
+```
 
+The exact list of installed collections may change as the CrowdSec Hub
+evolves.
 
-The SSH server should have the collections required for SSH monitoring.
+Expected HTTP/NGINX-related collections may include:
 
-The NGINX server should have collections such as:
-
+```text
 crowdsecurity/nginx
 crowdsecurity/http-cve
 crowdsecurity/base-http-scenarios
 crowdsecurity/linux
+```
 
+The exact collection names and versions should always be verified with:
 
-The exact collection versions and installed collections may change as the CrowdSec Hub evolves.
+```bash
+cscli collections list
+```
 
-SSH Brute-Force Detection Test
+## SSH Attack Simulation
 
-The primary demonstration is a controlled SSH brute-force simulation.
+The primary demonstration in this environment is an SSH brute-force
+simulation.
 
-The attacker containers are intentionally included to generate test traffic.
+The attacker containers are intentionally configured to generate controlled
+test traffic.
 
-1. Enter an Attacker Container
+## Enter an Attacker Container
 
 For example:
 
+```bash
 docker exec -it attacker-host1a bash
+```
 
+Or:
 
-If bash is unavailable:
+```bash
+docker exec -it attacker-host1b bash
+```
 
-docker exec -it attacker-host1a sh
+Check the hostname:
 
+```bash
+hostname
+```
 
-You should now be inside the attacker container.
+Check network interfaces:
 
-Verify its address:
-
+```bash
 ip addr
+```
 
+Check routes:
 
-Expected address:
-
-172.16.0.101
-
-
-Verify the routing table:
-
+```bash
 ip route
+```
 
+## Test Connectivity to the SSH Server
 
-The attacker network should have a route toward the main service network through the router.
+The SSH server has the static address:
 
-2. Test Connectivity to the SSH Server
+```text
+10.10.10.10
+```
 
-From attacker-host1a:
+From an attacker:
 
+```bash
 ping -c 3 10.10.10.10
-
+```
 
 Test TCP port 22:
 
+```bash
 nc -vz 10.10.10.10 22
+```
 
+## Connect to the SSH Server
 
-A successful TCP test indicates that the attacker can reach the SSH service.
+The intentionally weak laboratory credentials are:
 
-If ICMP is unavailable or blocked, a failed ping does not necessarily mean that SSH connectivity is unavailable. Use nc or ssh to test TCP connectivity.
+```text
+Username: labuser
+Password: labpassword
+```
 
-3. Connect to the SSH Server
+Connect from an attacker:
 
-From the attacker container:
-
+```bash
 ssh labuser@10.10.10.10
+```
 
+These credentials are for this laboratory only.
 
-The intentionally weak test password is:
+Never reuse them on real systems.
 
-labpassword
+## Generate Failed SSH Authentication Attempts
 
+From an attacker container:
 
-These credentials exist exclusively for this security testing environment.
-
-They must never be reused on real systems.
-
-4. Generate Failed Authentication Attempts
-
-Exit the successful SSH session if necessary.
-
-Then connect again:
-
+```bash
 ssh labuser@10.10.10.10
+```
 
-
-When prompted for the password, enter an incorrect password.
+When prompted for the password, enter an intentionally incorrect password.
 
 Repeat the failed authentication attempts in a controlled manner.
 
-For example, perform several failed login attempts from:
+Do not run automated password attacks against systems that you do not own
+or have explicit authorization to test.
 
-attacker-host1a
+## Monitor SSH Logs
 
+Open another terminal.
 
-You can repeat the same test from the other attacker containers:
+Enter the SSH container:
 
-attacker-host1b
-attacker-host2a
-attacker-host2b
-attacker-host3a
-attacker-host3b
+```bash
+docker exec -it ssh-server sh
+```
 
+Monitor authentication logs:
 
-This allows you to observe traffic from multiple source addresses.
+```bash
+tail -f /var/log/auth.log
+```
 
-Only perform these tests against this environment or systems for which you have explicit authorization.
+Failed attempts should produce SSH authentication failure events.
 
-Monitor SSH Authentication Logs
+The source address should correspond to the attacker container that generated
+the traffic.
 
-Open another terminal on the host.
+## Monitor CrowdSec Metrics
 
-Follow the SSH authentication log:
+Check CrowdSec metrics:
 
-docker exec ssh-server tail -f /var/log/auth.log
-
-
-You should see authentication failures similar to:
-
-Failed password for labuser from 172.16.0.101
-
-
-The exact log format depends on the SSH and system configuration.
-
-You can also inspect recent events:
-
-docker exec ssh-server tail -n 50 /var/log/auth.log
-
-Verify SSH CrowdSec Acquisition
-
-The SSH acquisition configuration is:
-
-/etc/crowdsec/acquis.d/
-
-
-Inspect it with:
-
-docker exec ssh-server sh -c 'cat /etc/crowdsec/acquis.d/*.yaml'
-
-
-The acquisition is expected to resemble:
-
-filenames:
-  - /var/log/auth.log
-
-labels:
-  type: syslog
-
-
-CrowdSec therefore reads the SSH authentication log as a syslog-formatted source.
-
-Monitor CrowdSec Metrics
-
-While generating failed SSH authentication attempts, run:
-
+```bash
 docker exec ssh-server cscli metrics
-
-
-Pay particular attention to:
-
-Acquisition Metrics
-Parser Metrics
-Scenario Metrics
-Local API Metrics
-
-For example, parser metrics may contain entries such as:
-
-crowdsecurity/sshd-logs
-crowdsecurity/sshd-success-logs
-crowdsecurity/syslog-logs
-
-
-The metrics help determine whether CrowdSec is successfully reading and processing the log data.
-
-Inspect CrowdSec Alerts
-
-List detected alerts:
-
-docker exec ssh-server cscli alerts list
-
-
-For detailed JSON output:
-
-docker exec ssh-server cscli alerts list -o json
-
-
-An alert indicates that CrowdSec detected activity matching a configured scenario.
-
-Inspect CrowdSec Decisions
-
-Check active decisions:
-
-docker exec ssh-server cscli decisions list
-
-
-If the configured scenario reaches its threshold, CrowdSec may create a decision associated with the attacker's source IP address.
-
-For example, the source could be:
-
-172.16.0.101
-
-
-The exact result depends on the installed scenario configuration and the activity generated during the test.
-
-Important: An alert and a decision are related but are not identical. An alert represents detected suspicious behavior. A decision represents an action CrowdSec has decided should be applied to an offending source.
-
-Understanding Parser Metrics
-
-CrowdSec parser metrics can initially look confusing.
-
-A simplified example:
-
-| Parser                               | Hits | Parsed | Unparsed |
-|--------------------------------------|------|--------|----------|
-| child-crowdsecurity/sshd-logs        | 75   | 1      | 74       |
-| child-crowdsecurity/sshd-success-logs| 4    | -      | 4        |
-| child-crowdsecurity/syslog-logs      | 5    | 5      | -        |
-| crowdsecurity/dateparse-enrich       | 1    | 1      | -        |
-| crowdsecurity/sshd-logs              | 5    | 1      | 4        |
-| crowdsecurity/sshd-success-logs      | 4    | -      | 4        |
-| crowdsecurity/syslog-logs            | 5    | 5      | -        |
-
-
-These counters describe how log lines move through CrowdSec's parser pipeline.
-
-Hits — Number of times the parser received or evaluated an event.
-Parsed — Number of events successfully parsed by that parser.
-Unparsed — Events that did not match that parser.
-Child parsers — Parsers that operate after a parent parser has classified or transformed an event.
-
-A high Unparsed value does not automatically mean CrowdSec is broken.
-
-Different parsers are designed to recognize different log formats or event types. A line that does not belong to one parser may be correctly processed by another parser.
-
-The most important question is whether the expected events eventually reach the appropriate scenario.
-
-For SSH testing, inspect the complete metrics output and look for:
-
-crowdsecurity/sshd-logs
-
-
-and the SSH brute-force scenarios under:
-
-Scenario Metrics
-
-NGINX Monitoring
-
-The NGINX container is configured to monitor:
-
-/var/log/nginx/access.log
-
-
-The project acquisition configuration is located at:
-
-nginx/acquis.d/nginx.yaml
-
-
-Inside the container it is installed as:
-
-/etc/crowdsec/acquis.d/nginx.yaml
-
-
-The configuration resembles:
-
-filenames:
-  - /var/log/nginx/access.log
-
-labels:
-  type: nginx
-
-
-This allows CrowdSec to consume NGINX access logs and process them through the installed NGINX and HTTP parsers and scenarios.
-
-Generate HTTP Test Traffic
-
-From an attacker container:
-
-curl http://10.10.10.20/
-
-
-The NGINX server should respond with the test page.
-
-You can verify the access log from the Docker host:
-
-docker exec nginx-server tail -f /var/log/nginx/access.log
-
-
-Generate additional controlled HTTP requests as required for your testing.
-
-Only test this environment or systems for which you have explicit authorization.
-
-Inspect NGINX CrowdSec Metrics
-
-Run:
-
-docker exec nginx-server cscli metrics
-
-
-Check alerts:
-
-docker exec nginx-server cscli alerts list
-
+```
 
 Check decisions:
 
-docker exec nginx-server cscli decisions list
+```bash
+docker exec ssh-server cscli decisions list
+```
 
-CrowdSec Configuration
+Check alerts:
 
-The main CrowdSec configuration is:
+```bash
+docker exec ssh-server cscli alerts list
+```
 
-/etc/crowdsec/config.yaml
+For detailed JSON output:
 
+```bash
+docker exec ssh-server cscli alerts list -o json
+```
 
-The local API uses credentials generated at runtime.
+Depending on the installed CrowdSec scenario and its thresholds, repeated
+authentication failures may result in a CrowdSec alert and decision.
 
-The credentials file is:
+The exact behavior can vary with the installed CrowdSec Hub content and
+configuration.
 
-/etc/crowdsec/local_api_credentials.yaml
+## NGINX HTTP Testing
 
+The NGINX server monitors:
 
-Runtime credentials must not be committed to Git.
-
-The project .gitignore should prevent generated secrets and runtime files from being added to the repository.
-
-CrowdSec Acquisition
-SSH
-
-SSH authentication logs are acquired from:
-
-/var/log/auth.log
-
-
-The acquisition configuration is:
-
-filenames:
-  - /var/log/auth.log
-
-labels:
-  type: syslog
-
-NGINX
-
-NGINX access logs are acquired from:
-
+```text
 /var/log/nginx/access.log
+```
 
+The CrowdSec acquisition configuration is located in the repository at:
 
-The acquisition configuration is:
+```text
+nginx/acquis.d/nginx.yaml
+```
 
+Inside the container it is installed as:
+
+```text
+/etc/crowdsec/acquis.d/nginx.yaml
+```
+
+The acquisition configuration uses:
+
+```yaml
 filenames:
   - /var/log/nginx/access.log
 
 labels:
   type: nginx
+```
 
-Troubleshooting
-Containers Are Not Running
-
-Check the environment:
-
-docker compose ps
-
-
-Check all container logs:
-
-docker compose logs --tail 200
-
-
-Check the SSH server:
-
-docker logs ssh-server --tail 200
-
-
-Check the NGINX server:
-
-docker logs nginx-server --tail 200
-
-
-Check the router:
-
-docker logs lab-router --tail 200
-
-
-Check an attacker:
-
-docker logs attacker-host1a --tail 200
-
-SSH Server Is Not Reachable
+## Generate HTTP Test Traffic
 
 From an attacker container:
 
-ip addr
+```bash
+curl http://10.10.10.20/
+```
 
+You can also test the host-published NGINX port from the Docker host:
 
-Verify that the attacker has a 172.16.0.x address.
+```bash
+curl http://localhost:8080/
+```
 
-Check its routing table:
+Monitor NGINX access logs:
 
-ip route
+```bash
+docker exec nginx-server tail -f /var/log/nginx/access.log
+```
 
+Generate additional controlled requests as needed for laboratory testing.
 
-Verify the SSH server:
+Only perform security testing against this environment or systems for which
+you have explicit authorization.
+## Inspect NGINX CrowdSec Metrics
 
-docker exec ssh-server ip addr
+Run:
 
+```bash
+docker exec nginx-server cscli metrics
+```
 
-The SSH server should have:
+Check alerts:
 
-10.10.10.10/24
+```bash
+docker exec nginx-server cscli alerts list
+```
 
+Check decisions:
 
-Test TCP connectivity:
+```bash
+docker exec nginx-server cscli decisions list
+```
 
-nc -vz 10.10.10.10 22
+## Test Routing Between Attacker Networks
 
+The router has:
 
-Check the SSH service:
+```text
+attackerNetA:
+    192.168.255.254
 
-docker exec ssh-server ss -lntp
+attackerNetB:
+    172.31.0.254
 
-Check Router Connectivity
+crowdSecNet:
+    10.10.10.254
+```
 
-Inspect the router interfaces:
+From an attacker on attackerNetA, test the router:
 
-docker exec lab-router ip addr
+```bash
+docker exec attacker-host1a ping -c 3 192.168.255.254
+```
 
+From an attacker on attackerNetB:
 
-Inspect the router routes:
+```bash
+docker exec attacker-host1b ping -c 3 172.31.0.254
+```
 
-docker exec lab-router ip route
+Test the service network from attackerNetA:
 
+```bash
+docker exec attacker-host1a ping -c 3 10.10.10.254
+```
 
-The router should provide connectivity between:
+Test the service network from attackerNetB:
 
-172.16.0.0/24
-10.10.10.0/24
-192.168.255.0/24
+```bash
+docker exec attacker-host1b ping -c 3 10.10.10.254
+```
 
-Check CrowdSec Configuration
+Test the SSH server:
 
-Inside the relevant container:
+```bash
+docker exec attacker-host1a ping -c 3 10.10.10.10
+```
 
-docker exec ssh-server crowdsec -c /etc/crowdsec/config.yaml -t
+Test the NGINX server:
 
+```bash
+docker exec attacker-host1a ping -c 3 10.10.10.20
+```
 
-For NGINX:
+If ICMP is not permitted by a particular container configuration, use TCP connectivity tests instead.
 
-docker exec nginx-server crowdsec -c /etc/crowdsec/config.yaml -t
+## Verify Attacker Routes
 
+For an attacker on attackerNetA:
 
-A successful configuration test should indicate that the configuration is valid.
+```bash
+docker exec attacker-host1a ip route
+```
 
-Check CrowdSec Processes
+For an attacker on attackerNetB:
+
+```bash
+docker exec attacker-host1b ip route
+```
+
+The attacker entrypoint configures routes through the appropriate router interface.
+
+For Network A:
+
+```text
+192.168.255.254
+```
+
+For Network B:
+
+```text
+172.31.0.254
+```
+
+The expected routes include:
+
+### Network A
+
+```text
+10.10.10.0/24 via 192.168.255.254
+172.31.0.0/24 via 192.168.255.254
+```
+
+### Network B
+
+```text
+10.10.10.0/24 via 172.31.0.254
+192.168.255.0/24 via 172.31.0.254
+```
+
+## CrowdSec Configuration
+
+The primary CrowdSec configuration is:
+
+```text
+/etc/crowdsec/config.yaml
+```
+
+The local CrowdSec API uses:
+
+```yaml
+api:
+  client:
+    credentials_path: /etc/crowdsec/local_api_credentials.yaml
+
+  server:
+    listen_uri: 127.0.0.1:8080
+```
+
+The local API credentials are generated during container initialization.
+
+The credentials file is:
+
+```text
+/etc/crowdsec/local_api_credentials.yaml
+```
+
+Generated credentials must remain runtime-only.
+
+Do not commit CrowdSec credentials, API keys, passwords, or other secrets
+to Git.
+## CrowdSec Acquisition
+
+### SSH
+
+SSH authentication logs are acquired from:
+
+```text
+/var/log/auth.log
+```
+
+The acquisition configuration uses:
+
+```yaml
+filenames:
+  - /var/log/auth.log
+
+labels:
+  type: syslog
+```
+
+### NGINX
+
+NGINX access logs are acquired from:
+
+```text
+/var/log/nginx/access.log
+```
+
+The acquisition configuration uses:
+
+```yaml
+filenames:
+  - /var/log/nginx/access.log
+
+labels:
+  type: nginx
+```
+
+## Troubleshooting
+
+### Container Keeps Restarting
+
+Check the SSH server:
+
+```bash
+docker logs ssh-server --tail 200
+```
+
+Check NGINX:
+
+```bash
+docker logs nginx-server --tail 200
+```
+
+Check the router:
+
+```bash
+docker logs lab-router --tail 200
+```
+
+Check all services:
+
+```bash
+docker compose ps
+```
+
+### Validate CrowdSec Configuration
+
+Inside the appropriate container:
+
+```bash
+crowdsec -c /etc/crowdsec/config.yaml -t
+```
+
+A successful validation should indicate that the configuration is valid.
+
+### Check CrowdSec Processes
 
 On the SSH server:
 
+```bash
 docker exec ssh-server pgrep -a crowdsec
+```
 
+On NGINX:
 
-On the NGINX server:
-
+```bash
 docker exec nginx-server pgrep -a crowdsec
+```
 
-Check CrowdSec Acquisition Files
+### Check the Local API
 
-SSH:
+Inside the SSH container:
 
-docker exec ssh-server ls -la /etc/crowdsec/acquis.d/
+```bash
+docker exec ssh-server curl -i http://127.0.0.1:8080/health
+```
 
+Inside NGINX:
 
-Inspect:
+```bash
+docker exec nginx-server curl -i http://127.0.0.1:8080/health
+```
 
-docker exec ssh-server sh -c 'cat /etc/crowdsec/acquis.d/*.yaml'
+### Check NGINX Acquisition
 
+List acquisition files:
 
-NGINX:
-
+```bash
 docker exec nginx-server ls -la /etc/crowdsec/acquis.d/
+```
 
+Display the NGINX acquisition:
 
-Inspect:
+```bash
+docker exec nginx-server cat /etc/crowdsec/acquis.d/nginx.yaml
+```
 
-docker exec nginx-server sh -c 'cat /etc/crowdsec/acquis.d/*.yaml'
+### Check NGINX Logs
 
-Check SSH Logs
+List the log directory:
 
-List the log file:
-
-docker exec ssh-server ls -lh /var/log/auth.log
-
-
-View recent events:
-
-docker exec ssh-server tail -n 50 /var/log/auth.log
-
-
-Follow the log:
-
-docker exec ssh-server tail -f /var/log/auth.log
-
-Check NGINX Logs
-
-List NGINX logs:
-
+```bash
 docker exec nginx-server ls -lh /var/log/nginx/
+```
 
+Monitor the access log:
 
-View recent access events:
-
-docker exec nginx-server tail -n 50 /var/log/nginx/access.log
-
-
-Follow the access log:
-
+```bash
 docker exec nginx-server tail -f /var/log/nginx/access.log
+```
 
-CrowdSec Shows No Decisions
+### Check SSH Logs
 
-A missing decision does not necessarily mean CrowdSec is malfunctioning.
+List SSH authentication logs:
 
-Check the entire processing pipeline:
+```bash
+docker exec ssh-server ls -lh /var/log/auth.log
+```
 
-Verify that the source log contains the expected events.
-Verify CrowdSec acquisition metrics.
-Verify parser metrics.
-Verify scenario metrics.
-Check CrowdSec alerts.
-Check active decisions.
+Monitor the authentication log:
 
-For SSH:
+```bash
+docker exec ssh-server tail -f /var/log/auth.log
+```
 
-docker exec ssh-server tail -n 50 /var/log/auth.log
+## Stop the Environment
 
-docker exec ssh-server cscli metrics
+Stop all containers:
 
-docker exec ssh-server cscli alerts list
-
-docker exec ssh-server cscli decisions list
-
-
-The configured scenario must reach its detection threshold before a decision is expected.
-
-Parser Metrics Show Unparsed Events
-
-An Unparsed count is not automatically an error.
-
-CrowdSec uses multiple parsers, and each parser is responsible for recognizing specific event formats.
-
-For example:
-
-crowdsecurity/syslog-logs
-crowdsecurity/sshd-logs
-crowdsecurity/sshd-success-logs
-
-
-A line can be unparsed by one parser while still being processed successfully by another parser.
-
-Focus on whether the expected SSH events ultimately reach the relevant SSH scenarios.
-
-Stop the Environment
-
-Stop the running environment:
-
+```bash
 docker compose down
+```
 
+This removes the containers and Compose-managed networks.
 
-This stops and removes the containers and the Compose-created networks.
+## Rebuild the Environment
 
-Rebuild the Environment
+To rebuild the images without using cached layers:
 
-To rebuild the images:
-
+```bash
 docker compose down
 docker compose build --no-cache
 docker compose up -d
+```
 
+## Reset the Environment
 
-Check the resulting environment:
+To completely recreate the laboratory:
 
-docker compose ps
-
-Reset the Environment
-
-To recreate the environment and remove Compose-managed volumes:
-
+```bash
 docker compose down --volumes --remove-orphans
 docker compose build --no-cache
 docker compose up -d
+```
 
+Warning: Removing volumes may delete CrowdSec state, databases,
+alerts, decisions, and other runtime information.
 
-Warning: Removing volumes can delete CrowdSec state, databases, and other runtime information. Use this when you intentionally want a clean environment.
+This is useful when a clean CrowdSec test environment is required.
+## Network Conflicts
 
-Security Considerations
+Docker may report an error such as:
 
-This project intentionally contains security weaknesses for educational and security-testing purposes.
+```text
+invalid pool request: Pool overlaps with other one on this address space
+```
+
+This means another Docker network is already using an overlapping subnet.
+
+Inspect existing networks:
+
+```bash
+docker network ls
+```
+
+Inspect their subnets:
+
+```bash
+docker network inspect <network-name>
+```
+
+The laboratory currently uses:
+
+```text
+10.10.10.0/24
+192.168.255.0/24
+172.31.0.0/24
+```
+
+If an old laboratory network exists with a conflicting configuration, remove
+it only if it is no longer required:
+
+```bash
+docker network rm <network-name>
+```
+
+Then recreate the environment:
+
+```bash
+docker compose up -d
+```
+
+Do not remove Docker networks belonging to other projects unless you
+understand their purpose.
+
+## Existing Docker Network Warning
+
+If Compose reports:
+
+```text
+a network with name crowdSecNet exists but was not created for project
+```
+
+Inspect the network:
+
+```bash
+docker network inspect crowdSecNet
+```
+
+The Compose configuration explicitly names the network:
+
+```yaml
+name: crowdSecNet
+```
+
+If the existing network belongs to the current project and has the expected
+subnet, it may be possible to reuse it.
+
+If the network is stale or belongs to another environment, stop the relevant
+containers and remove the stale network before recreating the lab.
+
+## Verify the Current Router Topology
+
+The router should have three interfaces:
+
+```text
+192.168.255.254/24
+172.31.0.254/24
+10.10.10.254/24
+```
+
+Verify with:
+
+```bash
+docker exec lab-router ip addr
+```
+
+Expected connected routes:
+
+```text
+10.10.10.0/24
+172.31.0.0/24
+192.168.255.0/24
+```
+
+Verify with:
+
+```bash
+docker exec lab-router ip route
+```
+
+The Docker bridge gateways are separate from the router addresses:
+
+```text
+Docker gateway:
+crowdSecNet    10.10.10.1
+attackerNetA   192.168.255.1
+attackerNetB   172.31.0.1
+
+Lab router:
+crowdSecNet    10.10.10.254
+attackerNetA   192.168.255.254
+attackerNetB   172.31.0.254
+```
+
+The attacker containers use the router addresses for routes between
+laboratory networks.
+
+## Security Considerations
+
+This project intentionally contains security weaknesses for educational
+and research purposes.
 
 The environment should therefore be treated as untrusted infrastructure.
 
 Do not:
 
-Expose the SSH service to the public Internet.
-Expose the NGINX service unnecessarily.
-Expose attacker containers to external networks.
-Reuse the test credentials.
-Use the environment against systems without authorization.
-Commit CrowdSec credentials or secrets to Git.
-Store production credentials in the repository.
-Connect the laboratory networks directly to production networks.
-Use the intentionally weak credentials outside this environment.
+- Expose the SSH service to the public Internet.
+- Expose attacker containers to untrusted external networks.
+- Reuse the laboratory credentials.
+- Use this environment against systems without authorization.
+- Commit CrowdSec credentials or secrets to Git.
+- Store production credentials in the repository.
+- Connect the intentionally vulnerable laboratory networks directly to
+  production networks.
+- Treat the attacker containers as trusted hosts.
 
-The attacker containers exist specifically to generate controlled test traffic.
+The attacker containers exist specifically to generate controlled test
+traffic.
+## Responsible Testing
 
-Responsible Testing
+All security-testing activities performed with this project are intended
+only for systems that you own or are explicitly authorized to test.
 
-All security simulations provided by this project are intended only for:
+This environment is designed to help students, security researchers,
+administrators, and security practitioners understand:
 
-Systems you own.
-Systems you are explicitly authorized to test.
-This isolated security testing environment.
+- SSH authentication and brute-force detection.
+- HTTP attack detection.
+- NGINX log acquisition.
+- CrowdSec parsers.
+- CrowdSec scenarios.
+- CrowdSec alerts.
+- CrowdSec decisions.
+- Security monitoring.
+- Container networking.
+- Routed Docker network topologies.
 
-Do not use the attacker containers to target third-party systems or Internet services.
+Use the environment responsibly and keep it isolated from production
+infrastructure.
 
-The purpose of the environment is to help users understand security monitoring and detection concepts without exposing real infrastructure.
+## Educational and Research Disclaimer
 
-What This Environment Demonstrates
+This project is provided solely for educational and research purposes.
 
-This environment can be used to study:
+It is an intentionally isolated laboratory environment designed to
+demonstrate CrowdSec, Docker networking, logging, monitoring, and security
+concepts.
 
-Docker network segmentation.
-Routing between isolated Docker networks.
-SSH authentication monitoring.
-SSH brute-force detection.
-NGINX access-log monitoring.
-HTTP security monitoring.
-CrowdSec acquisitions.
-CrowdSec parsers.
-CrowdSec scenarios.
-CrowdSec alerts.
-CrowdSec decisions.
-CrowdSec Local API.
-Security monitoring in containerized environments.
-Reproducibility
+The project is provided **"AS IS"**, without warranties or guarantees of
+any kind, to the maximum extent permitted by applicable law.
 
-The environment retrieves CrowdSec Hub content during initialization.
+The author and contributors are not responsible for damage, data loss,
+service disruption, security incidents, unauthorized access, or other
+consequences resulting from the use, misuse, modification,
+misconfiguration, or deployment of this project.
 
-Because CrowdSec Hub content can change over time, the exact installed scenarios, parsers, collections, and versions may change.
+Users are solely responsible for understanding and safely operating the
+environment.
 
-For reproducible experiments, record the Docker versions:
+Users must ensure that the laboratory is appropriately isolated and must
+not use it against systems or networks without appropriate authorization.
 
+This project may include or install third-party software and packages.
+Those components are not owned or relicensed by the author and remain
+subject to their respective licenses, terms, and conditions.
+
+By using, copying, modifying, or distributing this project, you acknowledge
+that you are responsible for your own use of the project and for complying
+with all applicable laws, licenses, terms, rules, and authorization
+requirements.
+
+## Third-Party Software and Components
+
+This project uses or may use third-party software, packages, container
+images, and other components, including but not limited to:
+
+- Docker
+- Docker Compose
+- Kali Linux
+- Alpine Linux
+- NGINX
+- CrowdSec
+- OpenSSH
+- Security and networking utilities distributed through the relevant
+  operating-system packages
+
+These components remain subject to their respective licenses, terms,
+conditions, and usage requirements.
+
+Nothing in this repository is intended to replace, modify, or supersede
+the licenses or terms applicable to third-party software.
+
+Users are responsible for complying with all applicable licenses, terms,
+conditions, rules, laws, and authorization requirements relating to
+third-party components used by this project.
+
+## Reproducibility
+
+The environment may retrieve packages, CrowdSec Hub content, parsers,
+scenarios, and collections during image construction or initialization.
+
+Therefore, the exact behavior of the environment may change over time.
+
+For reproducible experiments, record the versions used.
+
+Docker version:
+
+```bash
 docker --version
+```
 
+Docker Compose version:
+
+```bash
 docker compose version
+```
 
+CrowdSec version on the SSH server:
 
-Record the CrowdSec version on the SSH server:
-
+```bash
 docker exec ssh-server cscli version
+```
 
+CrowdSec version on the NGINX server:
 
-Record the CrowdSec version on the NGINX server:
-
+```bash
 docker exec nginx-server cscli version
+```
 
+Installed collections on the SSH server:
 
-Record installed collections:
-
+```bash
 docker exec ssh-server cscli collections list
+```
 
+Installed collections on the NGINX server:
+
+```bash
 docker exec nginx-server cscli collections list
+```
 
+Laboratory network configuration:
 
-Record parser information:
+```bash
+docker network inspect crowdSecNet
+docker network inspect attackerNetA
+docker network inspect attackerNetB
+```
 
-docker exec ssh-server cscli parsers list
+## AI Assistance
 
-docker exec nginx-server cscli parsers list
+AI-based tools, including GPT, were used as an assistant during the
+development and documentation of this project.
 
-Network Verification
+AI assistance was used to help with tasks such as drafting, reviewing, explaining, organizing, and improving configuration and documentation.
 
-To inspect Docker networks:
+The project is intended to be reviewed and used as an educational and research laboratory environment.
 
-docker network ls
+## License
 
+This project is provided under the license specified in the repository's
+`LICENSE` file.
 
-Inspect a specific network:
+The license applies to the original content of this repository to the extent permitted by applicable law.
 
-docker network inspect <network-name>
+Third-party software, packages, container images, tools, and other
+components remain subject to their respective licenses and terms.
 
+Users must comply with all applicable licenses, terms, conditions, rules,
+laws, regulations, and authorization requirements when using this project
+or its third-party components.
 
-Inspect the running containers:
+## Final Safety Notice
 
-docker compose ps
+Before starting the laboratory, verify that:
 
+- The environment is isolated.
+- The laboratory networks are not connected to production networks.
+- The laboratory credentials are not used anywhere else.
+- All testing targets are owned by you or covered by explicit authorization.
+- The intentionally vulnerable services are not exposed to the public
+  Internet.
+- Secrets and runtime credentials are not committed to Git.
+- The environment is shut down when testing is complete.
 
-Inspect the address of a specific container:
+The purpose of this project is to provide a controlled environment for
+understanding CrowdSec detection, security monitoring, container networking, and authorized security testing.
 
-docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ssh-server
+**Keep the laboratory isolated. Test only systems you are authorized to
+test.**
 
+## Laboratory Credentials
 
-For the NGINX server:
+The following credentials are intentionally weak and exist solely for laboratory testing:
 
-docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' nginx-server
+```text
+Username: labuser
+Password: labpassword
+```
 
+Do not use these credentials on real systems or reuse them anywhere else.
 
-For an attacker:
+## Scope of the Environment
 
-docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' attacker-host1a
+This project is designed as a self-contained Docker laboratory.
 
-Example Testing Workflow
+The intended environment consists of:
 
-A typical SSH CrowdSec test can be performed in this order.
+```text
+attackerNetA
+192.168.255.0/24
 
-Terminal 1 — Start the Environment
-docker compose up -d
+attackerNetB
+172.31.0.0/24
 
-Terminal 2 — Monitor SSH Logs
-docker exec ssh-server tail -f /var/log/auth.log
+crowdSecNet
+10.10.10.0/24
+```
 
-Terminal 3 — Monitor CrowdSec
-docker exec ssh-server cscli metrics
+The laboratory router provides routing between these networks.
 
-Terminal 4 — Enter the Attacker
-docker exec -it attacker-host1a bash
+The environment is not intended to provide secure production networking, production authentication, production monitoring, or production-grade service deployment.
 
+## End of Document
 
-Then:
+This laboratory is intended to make CrowdSec behavior and Docker networking easier to understand through controlled experimentation.
 
-ssh labuser@10.10.10.10
-
-
-Use an incorrect password repeatedly to generate failed authentication events.
-
-After the test, inspect:
-
-docker exec ssh-server cscli alerts list
-
-
-and:
-
-docker exec ssh-server cscli decisions list
-
-Expected SSH Detection Flow
-
-The intended processing flow is:
-
-Attacker Container
-       |
-       | SSH authentication attempts
-       v
-ssh-server :22
-       |
-       | /var/log/auth.log
-       v
-CrowdSec Acquisition
-       |
-       v
-Syslog Parser
-       |
-       v
-SSHD Parser
-       |
-       v
-SSH Brute-Force Scenario
-       |
-       v
-CrowdSec Alert
-       |
-       v
-CrowdSec Decision
-
-
-This flow is the primary purpose of the SSH portion of the environment.
-
-Expected NGINX Monitoring Flow
-
-The intended NGINX flow is:
-
-Attacker Container
-       |
-       | HTTP requests
-       v
-nginx-server :80
-       |
-       | /var/log/nginx/access.log
-       v
-CrowdSec Acquisition
-       |
-       v
-NGINX Parser
-       |
-       v
-HTTP Scenarios
-       |
-       v
-CrowdSec Alert
-       |
-       v
-CrowdSec Decision
-
-
-The exact scenario triggered depends on the HTTP activity and the CrowdSec Hub configuration installed in the environment.
-
-Contributing
-
-Contributions are welcome.
-
-When submitting changes:
-
-Keep the environment isolated and safe by default.
-Do not commit credentials or secrets.
-Document changes to the network topology.
-Document new services or containers.
-Test changes with Docker Compose before submitting a pull request.
-Document relevant CrowdSec configuration changes.
-Avoid introducing unnecessary external network exposure.
-Keep intentionally vulnerable components clearly documented.
-License
-
-Add the license appropriate for your project here.
-
-For example, this project may use the MIT License if that is appropriate for your intended distribution.
-
-Disclaimer
-
-This project is provided for educational, security-testing, and research purposes.
-
-It is intentionally designed to contain vulnerable components and weak credentials.
-
-The authors and contributors are not responsible for damage, disruption, unauthorized access, data loss, or other consequences resulting from misuse of this environment.
-
-Always obtain appropriate authorization before performing security testing.
-
-Keep the environment isolated. Test responsibly. Never reuse the laboratory credentials.
+Operate it carefully, keep it isolated, and perform security testing only where you have appropriate authorization.
