@@ -182,7 +182,7 @@ The environment is designed to run using Docker containers and does not require 
 Clone the repository:
 
 ```bash
-git clone https://github.com/<YOUR_USERNAME>/crowdsec-security-environment.git
+git clone https://github.com/mujiblatifi/crowdsec-security-environment.git
 ```
 
 Enter the project directory:
