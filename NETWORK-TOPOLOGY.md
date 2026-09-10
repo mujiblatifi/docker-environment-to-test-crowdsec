@@ -26,6 +26,7 @@ untrusted or production networks.
 
 ## Network Topology
 
+```text
                          CrowdSec Security Testing Environment
                          =====================================
 
@@ -46,7 +47,8 @@ untrusted or production networks.
                               |                       |
                               |      lab-router       |
                               |                       |
-                              |    10.10.10.254        |
+                              |    10.10.10.254       |
+                              |                       |
                               +-----------+-----------+
                                           |
                  +------------------------+------------------------+
@@ -58,11 +60,13 @@ untrusted or production networks.
         +--------+--------+       +-------+--------+       +------+------+
         |        |        |       |       |        |       |             |
         |        |        |       |       |        |       |             |
-     .101     .102     .103    .111    .112     .113    .10           .20
+      .101     .102     .103    .111    .112     .113    .10           .20
         |        |        |       |       |        |       |             |
         v        v        v       v       v        v       v             v
      host1a   host2a   host3a  host1b  host2b   host3b  SSH Server    NGINX
                                                         CrowdSec      CrowdSec
+```
+
 
 ## Docker Networks
 
