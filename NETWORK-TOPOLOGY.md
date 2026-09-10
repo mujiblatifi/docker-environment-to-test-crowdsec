@@ -174,18 +174,20 @@ attackerNetB:
         gateway: 172.31.0.1
 ```
 ## Complete Address Table
-### Container	Hostname	Network	IP Address
-lab-router	lab-router	crowdSecNet	10.10.10.254
-lab-router	lab-router	attackerNetA	192.168.255.254
-lab-router	lab-router	attackerNetB	172.31.0.254
-ssh-server	ssh-server	crowdSecNet	10.10.10.10
-nginx-server	nginx-server	crowdSecNet	10.10.10.20
-attacker-host1a	attacker-host1a	attackerNetA	192.168.255.101
-attacker-host2a	attacker-host2a	attackerNetA	192.168.255.102
-attacker-host3a	attacker-host3a	attackerNetA	192.168.255.103
-attacker-host1b	attacker-host1b	attackerNetB	172.31.0.111
-attacker-host2b	attacker-host2b	attackerNetB	172.31.0.112
-attacker-host3b	attacker-host3b	attackerNetB	172.31.0.113
+| Container | Hostname | Network | IP Address |
+|---|---|---|---|
+| `lab-router` | `lab-router` | `crowdSecNet` | `10.10.10.254` |
+| `lab-router` | `lab-router` | `attackerNetA` | `192.168.255.254` |
+| `lab-router` | `lab-router` | `attackerNetB` | `172.31.0.254` |
+| `ssh-server` | `ssh-server` | `crowdSecNet` | `10.10.10.10` |
+| `nginx-server` | `nginx-server` | `crowdSecNet` | `10.10.10.20` |
+| `attacker-host1a` | `attacker-host1a` | `attackerNetA` | `192.168.255.101` |
+| `attacker-host2a` | `attacker-host2a` | `attackerNetA` | `192.168.255.102` |
+| `attacker-host3a` | `attacker-host3a` | `attackerNetA` | `192.168.255.103` |
+| `attacker-host1b` | `attacker-host1b` | `attackerNetB` | `172.31.0.111` |
+| `attacker-host2b` | `attacker-host2b` | `attackerNetB` | `172.31.0.112` |
+| `attacker-host3b` | `attacker-host3b` | `attackerNetB` | `172.31.0.113` |
+
 
 ## Router
 The router container is:
