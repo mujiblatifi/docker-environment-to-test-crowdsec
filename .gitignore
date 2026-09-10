@@ -1,0 +1,33 @@
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Docker / runtime state
+docker-data/
+data/
+volumes/
+
+# CrowdSec runtime/state
+local_api_credentials.yaml
+crowdsec.db
+*.db
+
+# SSH private keys
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+
+# Temporary files
+tmp/
+*.tmp

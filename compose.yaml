@@ -1,0 +1,226 @@
+services:
+
+  # ============================================================
+  # ROUTER
+  # ============================================================
+
+  lab-router:
+    build:
+      context: ./router
+
+    container_name: lab-router
+    hostname: lab-router
+
+    cap_add:
+      - NET_ADMIN
+
+    sysctls:
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.rp_filter: "0"
+      net.ipv4.conf.default.rp_filter: "0"
+
+    networks:
+      crowdSecNet:
+        ipv4_address: 10.10.10.254
+
+      attakerNetA:
+        ipv4_address: 192.168.255.254
+
+      attakerNetB:
+        ipv4_address: 172.16.0.254
+
+    restart: unless-stopped
+
+
+  # ============================================================
+  # SSH SERVER - UBUNTU
+  # ============================================================
+
+  ssh-server:
+    build:
+      context: ./ssh
+
+    container_name: ssh-server
+    hostname: ssh-server
+
+    cap_add:
+      - NET_ADMIN
+
+    networks:
+      crowdSecNet:
+        ipv4_address: 10.10.10.10
+
+    ports:
+      - "2222:22"
+
+    restart: unless-stopped
+
+
+  # ============================================================
+  # NGINX SERVER - DEBIAN
+  # ============================================================
+
+  nginx-server:
+    build:
+      context: ./nginx
+
+    container_name: nginx-server
+    hostname: nginx-server
+
+    cap_add:
+      - NET_ADMIN
+
+    networks:
+      crowdSecNet:
+        ipv4_address: 10.10.10.20
+
+    ports:
+      - "8080:80"
+
+    restart: unless-stopped
+
+
+  # ============================================================
+  # ATTACKER NETWORK A - KALI
+  # ============================================================
+
+  attacker-host1a:
+    build:
+      context: ./attacker
+
+    container_name: attacker-host1a
+    hostname: attacker-host1a
+
+    cap_add:
+      - NET_ADMIN
+
+    networks:
+      attakerNetA:
+        ipv4_address: 192.168.255.101
+
+    restart: unless-stopped
+
+
+  attacker-host2a:
+    build:
+      context: ./attacker
+
+    container_name: attacker-host2a
+    hostname: attacker-host2a
+
+    cap_add:
+      - NET_ADMIN
+
+    networks:
+      attakerNetA:
+        ipv4_address: 192.168.255.102
+
+    restart: unless-stopped
+
+
+  attacker-host3a:
+    build:
+      context: ./attacker
+
+    container_name: attacker-host3a
+    hostname: attacker-host3a
+
+    cap_add:
+      - NET_ADMIN
+
+    networks:
+      attakerNetA:
+        ipv4_address: 192.168.255.103
+
+    restart: unless-stopped
+
+
+  # ============================================================
+  # ATTACKER NETWORK B - KALI
+  # ============================================================
+
+  attacker-host1b:
+    build:
+      context: ./attacker
+
+    container_name: attacker-host1b
+    hostname: attacker-host1b
+
+    cap_add:
+      - NET_ADMIN
+
+    networks:
+      attakerNetB:
+        ipv4_address: 172.16.0.111
+
+    restart: unless-stopped
+
+
+  attacker-host2b:
+    build:
+      context: ./attacker
+
+    container_name: attacker-host2b
+    hostname: attacker-host2b
+
+    cap_add:
+      - NET_ADMIN
+
+    networks:
+      attakerNetB:
+        ipv4_address: 172.16.0.112
+
+    restart: unless-stopped
+
+
+  attacker-host3b:
+    build:
+      context: ./attacker
+
+    container_name: attacker-host3b
+    hostname: attacker-host3b
+
+    cap_add:
+      - NET_ADMIN
+
+    networks:
+      attakerNetB:
+        ipv4_address: 172.16.0.113
+
+    restart: unless-stopped
+
+
+# ==============================================================
+# NETWORKS
+# ==============================================================
+
+networks:
+
+  crowdSecNet:
+    name: crowdSecNet
+    driver: bridge
+
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+          gateway: 10.10.10.1
+
+
+  attakerNetA:
+    name: attakerNetA
+    driver: bridge
+
+    ipam:
+      config:
+        - subnet: 192.168.255.0/24
+          gateway: 192.168.255.1
+
+
+  attakerNetB:
+    name: attakerNetB
+    driver: bridge
+
+    ipam:
+      config:
+        - subnet: 172.16.0.0/24
+          gateway: 172.16.0.1
