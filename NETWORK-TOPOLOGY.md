@@ -136,6 +136,7 @@ attackerNetA:
       - subnet: 192.168.255.0/24
         gateway: 192.168.255.1
 
+```
 ## Attacker Network B
 
 ### attackerNetB
@@ -190,7 +191,7 @@ Hostname:  lab-router
 
 The router has three network interfaces.
 
-
+```
 ## Router Interfaces
 
 ```text
@@ -272,7 +273,7 @@ The SSH server writes authentication events to:
 /var/log/auth.log
 
 CrowdSec monitors this log.
-
+```
 ## NGINX Server
 
 The NGINX server is:
@@ -376,7 +377,7 @@ attacker-host3a
 attacker-host1b
 attacker-host2b
 attacker-host3b
-
+```
 ## NGINX HTTP Attack Path
 
 HTTP traffic follows:
@@ -756,7 +757,7 @@ Do not connect the laboratory networks directly to production infrastructure.
 
 Only perform security testing against systems and networks that you own or
 have explicit authorization to test.
-
+```
 ## Topology Summary
 
 ### Networks
@@ -929,7 +930,7 @@ The environment is intended to demonstrate:
 - CrowdSec monitoring and validation
 
 Docker networking and routing are supporting infrastructure for these tests.
-
+```
 ## Disclaimer
 
 This project is provided "as is", without warranties or guarantees of any kind.
@@ -993,19 +994,18 @@ attacker-host2b
 
 attacker-host3b
     172.31.0.113
-
-Authoritative Configuration
+```
+### Authoritative Configuration
 The Docker Compose configuration is the authoritative source for the
 actual network configuration:
-
+```text
 compose.yaml
-
+```
 This document should be kept synchronized with compose.yaml.
-
 If the Docker configuration changes, update this topology document
 accordingly.
 
-Final Safety Notice
+## Final Safety Notice
 Before starting the laboratory, verify that:
 
 The environment is isolated.
