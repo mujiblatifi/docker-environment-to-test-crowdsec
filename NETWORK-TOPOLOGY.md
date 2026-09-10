@@ -86,18 +86,19 @@ Network:  crowdSecNet
 Subnet:   10.10.10.0/24
 Gateway:  10.10.10.1
 Router:   10.10.10.254
-
+```
 The main service network contains the SSH server, NGINX server, and one
 interface of the laboratory router.
 
-Services
+### Services
+```text
 Container	IP Address	Purpose
 lab-router	10.10.10.254	Laboratory router
 ssh-server	10.10.10.10	SSH service monitored by CrowdSec
 nginx-server	10.10.10.20	NGINX service monitored by CrowdSec
-
+```
 The network is defined in compose.yaml as:
-
+```text
 crowdSecNet:
   name: crowdSecNet
   driver: bridge
@@ -106,9 +107,11 @@ crowdSecNet:
     config:
       - subnet: 10.10.10.0/24
         gateway: 10.10.10.1
+```
 
-Attacker Network A
-attackerNetA
+## Attacker Network A
+### attackerNetA
+```text
 Network:  attackerNetA
 Subnet:   192.168.255.0/24
 Gateway:  192.168.255.1
@@ -117,6 +120,7 @@ Router:   192.168.255.254
 This network contains the first three attacker hosts.
 
 Attacker Hosts
+
 Container	IP Address
 attacker-host1a	192.168.255.101
 attacker-host2a	192.168.255.102
@@ -168,9 +172,9 @@ attackerNetB:
     config:
       - subnet: 172.31.0.0/24
         gateway: 172.31.0.1
-
-Complete Address Table
-Container	Hostname	Network	IP Address
+```
+## Complete Address Table
+### Container	Hostname	Network	IP Address
 lab-router	lab-router	crowdSecNet	10.10.10.254
 lab-router	lab-router	attackerNetA	192.168.255.254
 lab-router	lab-router	attackerNetB	172.31.0.254
@@ -183,7 +187,7 @@ attacker-host1b	attacker-host1b	attackerNetB	172.31.0.111
 attacker-host2b	attacker-host2b	attackerNetB	172.31.0.112
 attacker-host3b	attacker-host3b	attackerNetB	172.31.0.113
 
-Router
+## Router
 The router container is:
 
 Container: lab-router
@@ -191,8 +195,7 @@ Hostname:  lab-router
 
 The router has three network interfaces.
 
-```
-## Router Interfaces
+### Router Interfaces
 
 ```text
 crowdSecNet:
@@ -218,22 +221,22 @@ sysctls:
   net.ipv4.ip_forward: "1"
   net.ipv4.conf.all.rp_filter: "0"
   net.ipv4.conf.default.rp_filter: "0"
-
-Current Router Routing Table
+```
+### Current Router Routing Table
 The current routing table observed inside lab-router is:
-
+```text
 default via 192.168.255.1 dev eth0
 10.10.10.0/24 dev eth2 proto kernel scope link src 10.10.10.254
 172.31.0.0/24 dev eth1 proto kernel scope link src 172.31.0.254
 192.168.255.0/24 dev eth0 proto kernel scope link src 192.168.255.254
-
+```
 Verify with:
-
+```text
 docker exec lab-router ip route
-
-Current Router Interfaces
+```
+#### Current Router Interfaces
 The current router interface configuration is:
-
+```text
 eth0
     192.168.255.254/24
 
@@ -242,14 +245,15 @@ eth1
 
 eth2
     10.10.10.254/24
-
+```
 Verify with:
-
+```text
 docker exec lab-router ip addr
+```
 
-SSH Server
+## SSH Server
 The SSH server is:
-
+```text
 Container: ssh-server
 Hostname:  ssh-server
 Network:   crowdSecNet
@@ -302,8 +306,9 @@ NGINX writes access events to:
 /var/log/nginx/access.log
 
 CrowdSec monitors this log.
+```
 
-Attacker Hosts
+## Attacker Hosts
 The environment contains six Kali-based attacker containers.
 
 They are divided into two attacker networks.
@@ -340,7 +345,7 @@ or:
 
 docker exec -it attacker-host1b bash
 
-Attack Traffic Paths
+### Attack Traffic Paths
 SSH Attack Path
 SSH traffic can originate from either attacker network.
 
