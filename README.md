@@ -184,7 +184,14 @@ Clone the repository:
 ```bash
 git clone https://github.com/mujiblatifi/crowdsec-security-environment.git
 ```
-
+or if you are using ssh to connect to [GitHub](https://github.com)
+```bash
+git@github.com:mujiblatifi/docker-environment-to-test-crowdsec.git
+```
+for githubCli use
+```bash
+gh repo clone mujiblatifi/docker-environment-to-test-crowdsec
+```
 Enter the project directory:
 
 ```bash
